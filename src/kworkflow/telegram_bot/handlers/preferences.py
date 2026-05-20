@@ -146,6 +146,7 @@ async def save_category_follow(
     ]
     categories = await service.sync_user_follows(follow_category_ids)
     keyboard = build_main_menu_kbd()
+    await state.clear()
     await call.message.edit_text(
         "✅ Настройка завершена.\n\n"
         "Выбранные категории:\n"
