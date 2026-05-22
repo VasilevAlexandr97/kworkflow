@@ -1,10 +1,9 @@
-from kworkflow.preferences.services import UserCategoryFollowService
-from kworkflow.preferences.gateways import UserCategoryFollowGateway
 from collections.abc import AsyncIterable
 
+from aiogram import Bot
 from aiogram.types import TelegramObject
 from dishka import Provider, Scope, provide
-from kwork import KworkClient
+from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -12,12 +11,25 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from kworkflow.auth.id_provider import IdProvider, TelegramIdProvider
+from kworkflow.auth.id_provider import (
+    IdProvider,
+    TelegramIdProvider,
+    WorkerIdProvider,
+)
 from kworkflow.auth.telegram_auth import TelegramAuth
-from kworkflow.entrypoint.config import Config
 from kworkflow.infra.database.transaction_manager import TransactionManager
-from kworkflow.projects.gateway import ProjectCategoryGateway
-from kworkflow.projects.services import ProjectCategoryService
+from kworkflow.infra.kwork.client import KworkClient
+from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
+from kworkflow.main.config import Config
+from kworkflow.notifications.gateways import ProjectNotificationGateway
+from kworkflow.notifications.services import ProjectNotificationService
+from kworkflow.preferences.gateways import UserCategoryFollowGateway
+from kworkflow.preferences.services import UserCategoryFollowService
+from kworkflow.projects.gateway import ProjectCategoryGateway, ProjectGateway
+from kworkflow.projects.services import (
+    ProjectCategoryService,
+    ProjectSyncService,
+)
 from kworkflow.users.gateways import UserGateway
 
 
@@ -50,11 +62,32 @@ class InfraProvider(Provider):
     transaction_manager = provide(TransactionManager, scope=Scope.REQUEST)
 
     @provide(scope=Scope.APP)
+    def get_redis_pool(self, config: Config) -> ConnectionPool:
+        return ConnectionPool.from_url(
+            config.redis.connection_url,
+            max_connections=20,  # Пул из 20 соединений
+            decode_responses=True,
+            retry_on_timeout=True,
+            socket_timeout=5.0,
+            socket_connect_timeout=5.0,
+            socket_keepalive=True,
+            health_check_interval=30,
+        )
+
+    @provide(scope=Scope.APP)
+    def get_redis_client(self, pool: ConnectionPool) -> Redis:
+        return Redis(connection_pool=pool)
+
+    @provide(scope=Scope.APP)
     def get_kwork_client(self, config: Config) -> KworkClient:
         return KworkClient(
             login=config.kwork.login,
             password=config.kwork.password,
         )
+
+    @provide(scope=Scope.APP)
+    def get_telegram_notifier(self, bot: Bot) -> TelegramNotifier:
+        return TelegramNotifier(bot=bot)
 
 
 class UserProvider(Provider):
@@ -71,6 +104,14 @@ class ProjectProvider(Provider):
         ProjectCategoryService,
         scope=Scope.REQUEST,
     )
+    project_gateway = provide(
+        ProjectGateway,
+        scope=Scope.REQUEST,
+    )
+    project_sync_service = provide(
+        ProjectSyncService,
+        scope=Scope.REQUEST,
+    )
 
 
 class PreferenceProvider(Provider):
@@ -80,6 +121,17 @@ class PreferenceProvider(Provider):
     )
     user_category_follow_service = provide(
         UserCategoryFollowService,
+        scope=Scope.REQUEST,
+    )
+
+
+class NotificationProvider(Provider):
+    project_notification_gateway = provide(
+        ProjectNotificationGateway,
+        scope=Scope.REQUEST,
+    )
+    project_notification_service = provide(
+        ProjectNotificationService,
         scope=Scope.REQUEST,
     )
 
@@ -97,3 +149,9 @@ class TelegramBotProvider(Provider):
         )
 
     telegram_auth = provide(TelegramAuth, scope=Scope.REQUEST)
+
+
+class WorkerProvider(Provider):
+    @provide(scope=Scope.REQUEST, provides=IdProvider)
+    def get_id_provider(self) -> WorkerIdProvider:
+        return WorkerIdProvider()

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from kworkflow.projects.models import ProjectCategory
 

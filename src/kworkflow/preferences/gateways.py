@@ -1,3 +1,4 @@
+from kworkflow.users.models import User
 from uuid import UUID
 
 from sqlalchemy import and_, case, delete, insert, select
@@ -101,3 +102,18 @@ class UserCategoryFollowGateway:
             )
             for row in result
         ]
+
+    async def get_users_followed_to_category(
+        self,
+        category_id: UUID,
+    ) -> list[User]:
+        stmt = (
+            select(User)
+            .join(
+                UserCategoryFollow,
+                and_(UserCategoryFollow.user_id == User.id),
+            )
+            .where(UserCategoryFollow.category_id == category_id)
+        )
+        result = await self.session.scalars(stmt)
+        return list(result.all())

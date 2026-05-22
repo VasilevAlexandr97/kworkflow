@@ -3,11 +3,12 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from kworkflow.entrypoint.config import get_config
+from kworkflow.main.config import get_config
 from kworkflow.infra.database.base import Base
 from kworkflow.projects.models import *  # noqa: F403
 from kworkflow.users.models import *  # noqa: F403
 from kworkflow.preferences.models import *  # noqa: F403
+from kworkflow.notifications.models import *  # noqa: F403
 
 project_config = get_config()
 # this is the Alembic Config object, which provides

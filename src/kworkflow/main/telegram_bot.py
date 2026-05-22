@@ -8,8 +8,8 @@ from aiogram.fsm.storage.redis import RedisStorage
 from dishka import make_async_container
 from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
-from kworkflow.entrypoint.config import Config, get_config
-from kworkflow.entrypoint.di import (
+from kworkflow.main.config import Config, get_config
+from kworkflow.main.di import (
     InfraProvider,
     PreferenceProvider,
     ProjectProvider,
@@ -36,7 +36,7 @@ async def main():
         PreferenceProvider(),
         AiogramProvider(),
         TelegramBotProvider(),
-        context={Config: config},
+        context={Config: config, Bot: bot},
     )
     storage = RedisStorage.from_url(config.redis.connection_url)
     dp = Dispatcher(storage=storage)

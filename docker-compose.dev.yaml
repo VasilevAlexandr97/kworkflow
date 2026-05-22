@@ -1,0 +1,54 @@
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kworkflow_worker
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./src:/app/src
+    command: uv run --env-file=.env taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kworkflow_scheduler
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./src:/app/src
+    command: uv run --env-file=.env taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
+
+  postgres:
+    image: postgres:18-trixie
+    container_name: kworkflow_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql
+  redis:
+    image: redis:8.6.3-trixie
+    container_name: kworkflow_redis
+    env_file:
+      - .env
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+
+volumes:
+  pgdata:
+  redis_data:
