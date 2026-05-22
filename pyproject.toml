@@ -25,5 +25,8 @@ dev = [
 ]
 
 
+[project.scripts]
+telegram-bot="kworkflow.main.telegram_bot:run_polling"
+
 [tool.uv]
 package=true

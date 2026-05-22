@@ -100,3 +100,6 @@ def get_config() -> Config:
         #     api_key=get_required_env("POLZA_KEY"),
         # ),
     )
+
+
+config = get_config()
