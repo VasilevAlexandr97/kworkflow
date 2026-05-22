@@ -4,7 +4,6 @@ from uuid import UUID
 
 from dishka.integrations.taskiq import FromDishka, inject
 
-# from taskiq_redis import RedisStreamBroker
 from kworkflow.main.worker import broker
 from kworkflow.notifications.services import ProjectNotificationService
 from kworkflow.projects.services import ProjectSyncService
@@ -30,10 +29,3 @@ async def notify_new_projects(
     service: FromDishka[ProjectNotificationService],
 ):
     await service.notify_new_projects(new_projects)
-
-
-# def register_tasks(broker: RedisStreamBroker):
-#     broker.register_task(
-#         monitoring_new_projects,
-#         ,
-#     )
