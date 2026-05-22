@@ -38,4 +38,3 @@ class User(Base):
             f"updated_at={self.updated_at}"
             ")"
         )
-

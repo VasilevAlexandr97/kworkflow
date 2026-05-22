@@ -1,4 +1,3 @@
-from kworkflow.users.models import User
 from uuid import UUID
 
 from sqlalchemy import and_, case, delete, insert, select
@@ -14,6 +13,7 @@ from kworkflow.preferences.dto import CategoryFollowStatusDTO
 # )
 from kworkflow.preferences.models import UserCategoryFollow
 from kworkflow.projects.models import ProjectCategory
+from kworkflow.users.models import User
 
 
 class UserCategoryFollowGateway:

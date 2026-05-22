@@ -8,7 +8,6 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from kworkflow.preferences.dto import CategoryFollowStatusDTO
 from kworkflow.projects.models import ProjectCategory
 
 

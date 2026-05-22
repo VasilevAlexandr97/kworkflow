@@ -2,7 +2,6 @@ from uuid import UUID
 
 from aiogram import F, Router, types
 from aiogram.enums import ChatType
-from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
@@ -150,7 +149,7 @@ async def save_category_follow(
     await call.message.edit_text(
         "✅ Настройка завершена.\n\n"
         "Выбранные категории:\n"
-        f"{'\n'.join([f"- {c.title}" for c in categories])}\n\n"
+        f"{'\n'.join([f'- {c.title}' for c in categories])}\n\n"
         "Мониторинг активирован — уведомления о новых проектах будут приходить автоматически.",
         reply_markup=keyboard,
     )
