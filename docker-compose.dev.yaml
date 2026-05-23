@@ -11,7 +11,7 @@ services:
       - redis
     volumes:
       - ./src:/app/src
-    command: uv run --env-file=.env telegram-bot
+    command: uv run telegram-bot
   worker:
     build:
       context: .
@@ -24,7 +24,7 @@ services:
       - redis
     volumes:
       - ./src:/app/src
-    command: uv run --env-file=.env taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
+    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
 
   scheduler:
     build:
@@ -38,7 +38,7 @@ services:
       - redis
     volumes:
       - ./src:/app/src
-    command: uv run --env-file=.env taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
+    command: uv run taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
 
   postgres:
     image: postgres:18-trixie
