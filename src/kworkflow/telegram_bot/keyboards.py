@@ -25,6 +25,10 @@ class CategoryCB(CallbackData, prefix="cat"):
     category_id: UUID | None = None
 
 
+class GenerateProposalCB(CallbackData, prefix="gen_proposal"):
+    project_id: UUID
+
+
 def build_start_kbd() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -98,5 +102,14 @@ def build_main_menu_kbd():
     builder.button(
         text="📂 Категории",
         callback_data=CategoryCB(action=CatAction.BROWSE).pack(),
+    )
+    return builder.as_markup()
+
+
+def build_project_kbd(project_id: UUID):
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="✍️ Сгенерировать отклик",
+        callback_data=GenerateProposalCB(project_id=project_id).pack(),
     )
     return builder.as_markup()

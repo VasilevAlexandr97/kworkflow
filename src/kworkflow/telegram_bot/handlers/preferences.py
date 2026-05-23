@@ -5,7 +5,10 @@ from aiogram.enums import ChatType
 from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
-from kworkflow.preferences.services import UserCategoryFollowService
+from kworkflow.preferences.services import (
+    UserCategoryFollowService,
+    UserFreelancerProfileService,
+)
 from kworkflow.projects.services import ProjectCategoryService
 from kworkflow.telegram_bot.keyboards import (
     CatAction,
@@ -14,6 +17,7 @@ from kworkflow.telegram_bot.keyboards import (
     build_follow_subcategories_kbd,
     build_main_menu_kbd,
 )
+from kworkflow.telegram_bot.states import FreelancerProfileState
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -153,3 +157,18 @@ async def save_category_follow(
         "Мониторинг активирован — уведомления о новых проектах будут приходить автоматически.",
         reply_markup=keyboard,
     )
+
+
+@router.message(FreelancerProfileState.edit, F.text)
+@inject
+async def edit_freelancer_profile(
+    message: types.Message,
+    service: FromDishka[UserFreelancerProfileService],
+    state: FSMContext,
+):
+    if not message.text:
+        return
+    profile_text = message.text
+    await service.edit_or_create_profile(profile_text)
+    await message.answer("✅ Профиль сохранен.")
+    await state.clear()

@@ -1,7 +1,9 @@
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
     UUID as SA_UUID,
+    DateTime,
     ForeignKey,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -50,3 +52,24 @@ class Project(Base):
 
     def __repr__(self):
         return f"Project(id={self.id}, title={self.title})"
+
+
+class ProjectProposal(Base):
+    __tablename__ = "project_proposals"
+
+    id: Mapped[UUID] = mapped_column(SA_UUID(as_uuid=True), primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    prompt: Mapped[str]
+    generated_text: Mapped[str]
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )

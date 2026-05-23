@@ -17,3 +17,13 @@ class UserCategoryFollow(Base):
         ForeignKey("project_categories.id", ondelete="CASCADE"),
         primary_key=True,
     )
+
+
+class UserFreelancerProfile(Base):
+    __tablename__ = "user_freelancer_profiles"
+
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    about: Mapped[str]

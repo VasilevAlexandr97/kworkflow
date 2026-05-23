@@ -3,6 +3,7 @@ from collections.abc import AsyncIterable
 from aiogram import Bot
 from aiogram.types import TelegramObject
 from dishka import Provider, Scope, provide
+from openai import AsyncOpenAI
 from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -23,11 +24,23 @@ from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.services import ProjectNotificationService
-from kworkflow.preferences.gateways import UserCategoryFollowGateway
-from kworkflow.preferences.services import UserCategoryFollowService
-from kworkflow.projects.gateway import ProjectCategoryGateway, ProjectGateway
+from kworkflow.preferences.gateways import (
+    UserCategoryFollowGateway,
+    UserFreelancerProfileGateway,
+)
+from kworkflow.preferences.services import (
+    UserCategoryFollowService,
+    UserFreelancerProfileService,
+)
+from kworkflow.projects.gateway import (
+    ProjectCategoryGateway,
+    ProjectGateway,
+    ProjectProposalGateway,
+)
+from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.services import (
     ProjectCategoryService,
+    ProjectProposalService,
     ProjectSyncService,
 )
 from kworkflow.users.gateways import UserGateway
@@ -75,8 +88,13 @@ class InfraProvider(Provider):
         )
 
     @provide(scope=Scope.APP)
-    def get_redis_client(self, pool: ConnectionPool) -> Redis:
-        return Redis(connection_pool=pool)
+    async def get_redis_client(
+        self,
+        pool: ConnectionPool,
+    ) -> AsyncIterable[Redis]:
+        client = Redis(connection_pool=pool)
+        yield client
+        await client.close()
 
     @provide(scope=Scope.APP)
     def get_kwork_client(self, config: Config) -> KworkClient:
@@ -88,6 +106,18 @@ class InfraProvider(Provider):
     @provide(scope=Scope.APP)
     def get_telegram_notifier(self, bot: Bot) -> TelegramNotifier:
         return TelegramNotifier(bot=bot)
+
+    @provide(scope=Scope.APP)
+    async def get_async_openai_client(
+        self,
+        config: Config,
+    ) -> AsyncIterable[AsyncOpenAI]:
+        client = AsyncOpenAI(
+            api_key=config.polza.api_key,
+            base_url=config.polza.base_url,
+        )
+        yield client
+        await client.close()
 
 
 class UserProvider(Provider):
@@ -112,6 +142,18 @@ class ProjectProvider(Provider):
         ProjectSyncService,
         scope=Scope.REQUEST,
     )
+    project_proposal_gateway = provide(
+        ProjectProposalGateway,
+        scope=Scope.REQUEST,
+    )
+    project_proposal_generator = provide(
+        ProjectProposalGenerator,
+        scope=Scope.REQUEST,
+    )
+    project_proposal_service = provide(
+        ProjectProposalService,
+        scope=Scope.REQUEST,
+    )
 
 
 class PreferenceProvider(Provider):
@@ -121,6 +163,14 @@ class PreferenceProvider(Provider):
     )
     user_category_follow_service = provide(
         UserCategoryFollowService,
+        scope=Scope.REQUEST,
+    )
+    user_freelancer_profile_gateway = provide(
+        UserFreelancerProfileGateway,
+        scope=Scope.REQUEST,
+    )
+    user_freelancer_profile_service = provide(
+        UserFreelancerProfileService,
         scope=Scope.REQUEST,
     )
 

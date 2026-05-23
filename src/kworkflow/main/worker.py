@@ -24,7 +24,10 @@ logger = logging.getLogger(__name__)
 
 config = get_config()
 
-result_backend = RedisAsyncResultBackend(redis_url=config.redis.connection_url)
+result_backend = RedisAsyncResultBackend(
+    redis_url=config.redis.connection_url,
+    result_ex_time=3600,
+)
 broker = RedisStreamBroker(
     url=config.redis.connection_url,
 ).with_result_backend(result_backend)

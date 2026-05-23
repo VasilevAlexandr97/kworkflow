@@ -1,11 +1,11 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from kworkflow.projects.models import Project, ProjectCategory
+from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
 
 
 class ProjectCategoryGateway:
@@ -107,3 +107,29 @@ class ProjectGateway:
             stmt = stmt.options(selectinload(Project.category))
         result = await self.session.scalars(stmt)
         return list(result.all())
+
+    async def get_by_id(self, project_id: UUID) -> Project | None:
+        stmt = select(Project).where(Project.id == project_id)
+        return await self.session.scalar(stmt)
+
+
+class ProjectProposalGateway:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add(self, project_proposal: ProjectProposal):
+        self.session.add(project_proposal)
+        await self.session.flush()
+
+    async def get(
+        self,
+        project_id: UUID,
+        user_id: UUID,
+    ) -> ProjectProposal | None:
+        stmt = select(ProjectProposal).where(
+            and_(
+                ProjectProposal.project_id == project_id,
+                ProjectProposal.user_id == user_id,
+            ),
+        )
+        return await self.session.scalar(stmt)

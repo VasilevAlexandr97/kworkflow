@@ -11,7 +11,10 @@ from kworkflow.preferences.dto import CategoryFollowStatusDTO
 #     UserCategoryFollowAlreadyExistsError,
 #     UserCategoryFollowCreateError,
 # )
-from kworkflow.preferences.models import UserCategoryFollow
+from kworkflow.preferences.models import (
+    UserCategoryFollow,
+    UserFreelancerProfile,
+)
 from kworkflow.projects.models import ProjectCategory
 from kworkflow.users.models import User
 
@@ -117,3 +120,18 @@ class UserCategoryFollowGateway:
         )
         result = await self.session.scalars(stmt)
         return list(result.all())
+
+
+class UserFreelancerProfileGateway:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add(self, profile: UserFreelancerProfile):
+        self.session.add(profile)
+        await self.session.flush()
+
+    async def get(self, user_id: UUID) -> UserFreelancerProfile | None:
+        stmt = select(UserFreelancerProfile).where(
+            UserFreelancerProfile.user_id == user_id,
+        )
+        return await self.session.scalar(stmt)

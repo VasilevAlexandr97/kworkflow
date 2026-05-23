@@ -41,9 +41,10 @@ class TelegramBotConfig:
     token: str
 
 
-# @dataclass(frozen=True)
-# class PolzaConfig:
-#     api_key: str
+@dataclass(frozen=True)
+class PolzaConfig:
+    api_key: str
+    base_url: str
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ class Config:
     postgres: PostgresConfig
     redis: RedisConfig
     kwork: KworkConfig
-    # polza: PolzaConfig
+    polza: PolzaConfig
     # project_dir: Path = PROJECT_DIR
     telegram_bot: TelegramBotConfig
     debug: bool = field(default=False)
@@ -96,9 +97,10 @@ def get_config() -> Config:
             token=get_required_env("TELEGRAM_BOT_TOKEN"),
         ),
         debug=get_optional_env("DEBUG") in ("True", "true", "1"),
-        # polza=PolzaConfig(
-        #     api_key=get_required_env("POLZA_KEY"),
-        # ),
+        polza=PolzaConfig(
+            api_key=get_required_env("POLZA_API_KEY"),
+            base_url=get_required_env("POLZA_BASE_URL"),
+        ),
     )
 
 

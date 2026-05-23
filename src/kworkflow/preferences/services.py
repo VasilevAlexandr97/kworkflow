@@ -3,7 +3,11 @@ from uuid import UUID
 from kworkflow.auth.id_provider import IdProvider
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.preferences.dto import CategoryFollowStatusDTO
-from kworkflow.preferences.gateways import UserCategoryFollowGateway
+from kworkflow.preferences.gateways import (
+    UserCategoryFollowGateway,
+    UserFreelancerProfileGateway,
+)
+from kworkflow.preferences.models import UserFreelancerProfile
 from kworkflow.projects.gateway import ProjectCategoryGateway
 
 
@@ -52,3 +56,32 @@ class UserCategoryFollowService:
 
         await self.transaction_manager.commit()
         return await self.follow_gateway.get_user_followed_categories(user_id)
+
+
+class UserFreelancerProfileService:
+    def __init__(
+        self,
+        profile_gateway: UserFreelancerProfileGateway,
+        id_provider: IdProvider,
+        transaction_manager: TransactionManager,
+    ):
+        self.profile_gateway = profile_gateway
+        self.id_provider = id_provider
+        self.transaction_manager = transaction_manager
+
+    async def edit_or_create_profile(
+        self,
+        about_text: str,
+    ) -> UserFreelancerProfile:
+        user_id = await self.id_provider.get_current_user_id()
+        profile = await self.profile_gateway.get(user_id)
+        if profile is not None:
+            profile.about = about_text
+        else:
+            profile = UserFreelancerProfile(
+                user_id=user_id,
+                about=about_text,
+            )
+            await self.profile_gateway.add(profile)
+        await self.transaction_manager.commit()
+        return profile

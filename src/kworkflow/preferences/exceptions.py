@@ -4,3 +4,7 @@
 
 # class UserCategoryFollowCreateError(Exception):
 #     pass
+
+
+class UserFreelancerProfileNotFoundError(Exception):
+    pass

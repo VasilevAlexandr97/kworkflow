@@ -13,6 +13,7 @@ from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.models import ProjectNotification
 from kworkflow.preferences.gateways import UserCategoryFollowGateway
 from kworkflow.projects.gateway import ProjectGateway
+from kworkflow.telegram_bot.keyboards import build_project_kbd
 from kworkflow.telegram_bot.messages import project_message
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ class ProjectNotificationService:
                         await self.telegram_notifier.send_message(
                             user.telegram_id,
                             project_message(project),
+                            keyboard=build_project_kbd(project.id),
                         )
                         project_notifications.append(
                             ProjectNotification(

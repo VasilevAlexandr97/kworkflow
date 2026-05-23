@@ -1,14 +1,30 @@
 import html
+import logging
 import re
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from uuid6 import uuid7
 
+from kworkflow.auth.id_provider import IdProvider
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
-from kworkflow.projects.gateway import ProjectCategoryGateway, ProjectGateway
-from kworkflow.projects.models import Project, ProjectCategory
+from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
+from kworkflow.preferences.gateways import UserFreelancerProfileGateway
+from kworkflow.projects.exceptions import (
+    ProjectNotFoundError,
+    ProjectProposalGenerationError,
+)
+from kworkflow.projects.gateway import (
+    ProjectCategoryGateway,
+    ProjectGateway,
+    ProjectProposalGateway,
+)
+from kworkflow.projects.generators import ProjectProposalGenerator
+from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectCategoryService:
@@ -129,3 +145,67 @@ class ProjectSyncService:
             await self.project_gateway.bulk_insert(new_projects)
             await self.transaction_manager.commit()
         return [project.id for project in new_projects]
+
+
+class ProjectProposalService:
+    def __init__(
+        self,
+        id_provider: IdProvider,
+        project_gateway: ProjectGateway,
+        project_proposal_gateway: ProjectProposalGateway,
+        freelancer_profile_gateway: UserFreelancerProfileGateway,
+        proposal_generator: ProjectProposalGenerator,
+        transaction_manager: TransactionManager,
+    ):
+        self.id_provider = id_provider
+        self.project_gateway = project_gateway
+        self.project_proposal_gateway = project_proposal_gateway
+        self.freelancer_profile_gateway = freelancer_profile_gateway
+        self.proposal_generator = proposal_generator
+        self.transaction_manager = transaction_manager
+
+    def _build_project_info(self, project: Project) -> str:
+        return f"Название: {project.title}\n\nЗадание: {project.description}"
+
+    async def generate_proposal(self, project_id: UUID) -> ProjectProposal:
+        user_id = await self.id_provider.get_current_user_id()
+        freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
+        logger.info(
+            "freelancer_profile: %s",
+            freelancer_profile,
+        )
+        if freelancer_profile is None:
+            raise UserFreelancerProfileNotFoundError
+
+        project = await self.project_gateway.get_by_id(project_id)
+        if project is None:
+            raise ProjectNotFoundError
+
+        project_info = self._build_project_info(project)
+        try:
+            result, prompt = await self.proposal_generator.generate(
+                freelancer_info=freelancer_profile.about,
+                project_info=project_info,
+            )
+        except ProjectProposalGenerationError:
+            logger.info(f"Project info: {project_info}")
+            logger.info(f"Freelancer info: {freelancer_profile.about}")
+            logger.info("Project proposal generation error")
+            raise
+        project_proposal = await self.project_proposal_gateway.get(
+            project_id=project_id,
+            user_id=user_id,
+        )
+        if project_proposal:
+            return project_proposal
+        project_proposal = ProjectProposal(
+            id=uuid7(),
+            project_id=project_id,
+            user_id=user_id,
+            prompt=prompt,
+            generated_text=result.text,
+            created_at=datetime.now(UTC),
+        )
+        await self.project_proposal_gateway.add(project_proposal)
+        await self.transaction_manager.commit()
+        return project_proposal

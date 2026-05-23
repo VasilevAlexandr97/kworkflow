@@ -19,10 +19,14 @@ from kworkflow.telegram_bot.handlers.default import router as default_router
 from kworkflow.telegram_bot.handlers.preferences import (
     router as preferences_router,
 )
+from kworkflow.telegram_bot.handlers.projects import router as projects_router
 
 bot = Bot(
     token=config.telegram_bot.token,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    default=DefaultBotProperties(
+        parse_mode=ParseMode.HTML,
+        link_preview_is_disabled=True,
+    ),
 )
 container = make_async_container(
     InfraProvider(),
@@ -38,6 +42,7 @@ container = make_async_container(
 def setup_handlers(dp: Dispatcher):
     dp.include_router(default_router)
     dp.include_router(preferences_router)
+    dp.include_router(projects_router)
 
 
 def get_dispatcher() -> Dispatcher:
