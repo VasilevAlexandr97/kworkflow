@@ -170,10 +170,6 @@ class ProjectProposalService:
     async def generate_proposal(self, project_id: UUID) -> ProjectProposal:
         user_id = await self.id_provider.get_current_user_id()
         freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
-        logger.info(
-            "freelancer_profile: %s",
-            freelancer_profile,
-        )
         if freelancer_profile is None:
             raise UserFreelancerProfileNotFoundError
 
@@ -181,8 +177,14 @@ class ProjectProposalService:
         if project is None:
             raise ProjectNotFoundError
 
-        project_info = self._build_project_info(project)
+        project_proposal = await self.project_proposal_gateway.get(
+            project_id=project_id,
+            user_id=user_id,
+        )
+        if project_proposal:
+            return project_proposal
         try:
+            project_info = self._build_project_info(project)
             result, prompt = await self.proposal_generator.generate(
                 freelancer_info=freelancer_profile.about,
                 project_info=project_info,
@@ -192,12 +194,6 @@ class ProjectProposalService:
             logger.info(f"Freelancer info: {freelancer_profile.about}")
             logger.info("Project proposal generation error")
             raise
-        project_proposal = await self.project_proposal_gateway.get(
-            project_id=project_id,
-            user_id=user_id,
-        )
-        if project_proposal:
-            return project_proposal
         project_proposal = ProjectProposal(
             id=uuid7(),
             project_id=project_id,
