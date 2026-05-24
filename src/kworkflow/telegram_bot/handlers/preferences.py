@@ -17,6 +17,10 @@ from kworkflow.telegram_bot.keyboards import (
     build_follow_subcategories_kbd,
     build_menu_kbd,
 )
+from kworkflow.telegram_bot.messages import (
+    categories_saved_message,
+    select_categories_message,
+)
 from kworkflow.telegram_bot.states import FreelancerProfileState
 
 router = Router()
@@ -45,9 +49,10 @@ async def start_category_follow(
         r.category for r in result if r.category.parent_id is None
     ]
     follow_category_ids = [str(r.category.id) for r in result if r.is_followed]
+    text = select_categories_message()
     keyboard = build_follow_categories_kbd(root_categories)
     await state.set_data({"follow_category_ids": follow_category_ids})
-    await call.message.answer("📂 Выберите Категории:", reply_markup=keyboard)
+    await call.message.answer(text, reply_markup=keyboard)
     await call.message.edit_reply_markup(reply_markup=None)
 
 
@@ -58,11 +63,9 @@ async def back_root_categories(
     service: FromDishka[ProjectCategoryService],
 ):
     categories = await service.get_root_categories()
+    text = select_categories_message()
     keyboard = build_follow_categories_kbd(categories)
-    await call.message.edit_text(
-        "📂 Выберите Категории:",
-        reply_markup=keyboard,
-    )
+    await call.message.edit_text(text, reply_markup=keyboard)
 
 
 @router.callback_query(
@@ -84,15 +87,13 @@ async def show_follow_subcategories(
         UUID(i) for i in state_data.get("follow_category_ids", [])
     ]
     state_data["root_id"] = str(callback_data.category_id)
+    text = select_categories_message()
     keyboard = build_follow_subcategories_kbd(
         categories,
         follow_category_ids,
     )
     await state.set_data(state_data)
-    await call.message.edit_text(
-        "📂 Выберите Категории:",
-        reply_markup=keyboard,
-    )
+    await call.message.edit_text(text, reply_markup=keyboard)
 
 
 @router.callback_query(
@@ -124,14 +125,12 @@ async def follow_category(
         ]
     state_data["follow_category_ids"] = [str(i) for i in follow_category_ids]
     await state.set_data(state_data)
+    text = select_categories_message()
     keyboard = build_follow_subcategories_kbd(
         categories,
         follow_category_ids,
     )
-    await call.message.edit_text(
-        "📂 Выберите Категории:",
-        reply_markup=keyboard,
-    )
+    await call.message.edit_text(text, reply_markup=keyboard)
 
 
 @router.callback_query(
@@ -148,15 +147,10 @@ async def save_category_follow(
         UUID(i) for i in state_data.get("follow_category_ids", [])
     ]
     categories = await service.sync_user_follows(follow_category_ids)
+    text = categories_saved_message(categories)
     keyboard = build_menu_kbd()
+    await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
-    await call.message.edit_text(
-        "✅ Настройка завершена.\n\n"
-        "Выбранные категории:\n"
-        f"{'\n'.join([f'- {c.title}' for c in categories])}\n\n"
-        "Мониторинг активирован — уведомления о новых проектах будут приходить автоматически.",
-        reply_markup=keyboard,
-    )
 
 
 @router.message(FreelancerProfileState.edit, F.text)

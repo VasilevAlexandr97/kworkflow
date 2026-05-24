@@ -63,10 +63,31 @@ def menu_message(follow_categories: list[ProjectCategory]) -> str:
     follow_categories_str = "\n".join(
         f"• {cat.title}" for cat in follow_categories
     )
+    if not follow_categories:
+        follow_categories_str = "• Нет отслеживаемых категорий"
     return (
         "🏠 <b>Главное меню KworkFlow</b>\n\n"
-        "⚡ KworkFlow отслеживает новые проекты на бирже <b>Kwork</b> и присылает подходящие задания автоматически.\n\n"
+        "⚡ <b>KworkFlow</b> отслеживает новые проекты на бирже <b>Kwork</b> "
+        "и присылает подходящие задания автоматически.\n\n"
         "<b>📂 Отслеживаемые категории:\n</b>"
         f"{follow_categories_str}\n\n"
         "⚙️ Используйте меню ниже для управления настройками"
     )
+
+
+def categories_saved_message(follow_categories: list[ProjectCategory]) -> str:
+    follow_categories_str = "\n".join(
+        f"• {cat.title}" for cat in follow_categories
+    )
+    if not follow_categories:
+        follow_categories_str = "• Нет отслеживаемых категорий"
+    return (
+        "✅ Настройка завершена.\n\n"
+        "📂Выбранные категории:\n"
+        f"{follow_categories_str}\n\n"
+        "Мониторинг активирован — уведомления о новых проектах будут приходить автоматически."
+    )
+
+
+def select_categories_message() -> str:
+    return "📂 Выберите категории для мониторинга"
