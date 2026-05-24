@@ -15,7 +15,7 @@ from kworkflow.telegram_bot.keyboards import (
     CategoryCB,
     build_follow_categories_kbd,
     build_follow_subcategories_kbd,
-    build_main_menu_kbd,
+    build_menu_kbd,
 )
 from kworkflow.telegram_bot.states import FreelancerProfileState
 
@@ -148,7 +148,7 @@ async def save_category_follow(
         UUID(i) for i in state_data.get("follow_category_ids", [])
     ]
     categories = await service.sync_user_follows(follow_category_ids)
-    keyboard = build_main_menu_kbd()
+    keyboard = build_menu_kbd()
     await state.clear()
     await call.message.edit_text(
         "✅ Настройка завершена.\n\n"

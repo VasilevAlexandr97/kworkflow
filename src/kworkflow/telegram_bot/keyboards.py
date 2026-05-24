@@ -97,7 +97,7 @@ def build_follow_subcategories_kbd(
     return builder.as_markup()
 
 
-def build_main_menu_kbd():
+def build_menu_kbd():
     builder = InlineKeyboardBuilder()
     builder.button(
         text="📂 Категории",

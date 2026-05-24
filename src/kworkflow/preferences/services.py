@@ -9,6 +9,7 @@ from kworkflow.preferences.gateways import (
 )
 from kworkflow.preferences.models import UserFreelancerProfile
 from kworkflow.projects.gateway import ProjectCategoryGateway
+from kworkflow.projects.models import ProjectCategory
 
 
 class UserCategoryFollowService:
@@ -31,6 +32,10 @@ class UserCategoryFollowService:
         return await self.follow_gateway.get_categories_with_follow_status(
             user_id,
         )
+
+    async def get_followed_categories(self) -> list[ProjectCategory]:
+        user_id = await self.id_provider.get_current_user_id()
+        return await self.follow_gateway.get_followed_categories(user_id)
 
     async def sync_user_follows(self, new_follow_ids: list[UUID]):
         user_id = await self.id_provider.get_current_user_id()
@@ -55,7 +60,7 @@ class UserCategoryFollowService:
             await self.follow_gateway.bulk_insert(follows_data)
 
         await self.transaction_manager.commit()
-        return await self.follow_gateway.get_user_followed_categories(user_id)
+        return await self.follow_gateway.get_followed_categories(user_id)
 
 
 class UserFreelancerProfileService:

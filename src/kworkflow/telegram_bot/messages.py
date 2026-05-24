@@ -1,4 +1,4 @@
-from kworkflow.projects.models import Project
+from kworkflow.projects.models import Project, ProjectCategory
 
 
 def project_message(project: Project) -> str:
@@ -45,3 +45,28 @@ GENERATE_PROPOSAL_PROFILE_REQUIRED_TEXT = (
 EDIT_FREELANCER_PROFILE_TEXT = (
     "✏️ Обновите информацию о себе для генерации более точных откликов."
 )
+
+
+def start_message() -> str:
+    return (
+        "👋 Добро пожаловать в <b>KworkFlow</b>\n\n"
+        "Мониторю проекты на бирже Kwork и присылаю новые мгновенно.\n\n"
+        "⚡ Что я делаю:\n"
+        "• Мониторинг новых проектов\n"
+        "• Мгновенные уведомления\n"
+        "• Генерация автоматических откликов\n\n"
+        "📂 Настрой категории — и я начну мониторинг"
+    )
+
+
+def menu_message(follow_categories: list[ProjectCategory]) -> str:
+    follow_categories_str = "\n".join(
+        f"• {cat.title}" for cat in follow_categories
+    )
+    return (
+        "🏠 <b>Главное меню KworkFlow</b>\n\n"
+        "⚡ KworkFlow отслеживает новые проекты на бирже <b>Kwork</b> и присылает подходящие задания автоматически.\n\n"
+        "<b>📂 Отслеживаемые категории:\n</b>"
+        f"{follow_categories_str}\n\n"
+        "⚙️ Используйте меню ниже для управления настройками"
+    )
