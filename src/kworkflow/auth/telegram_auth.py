@@ -2,9 +2,7 @@ import logging
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
-
-from uuid6 import uuid7
+from uuid import UUID, uuid7
 
 from kworkflow.auth.exceptions import AuthenticationError
 from kworkflow.auth.id_provider import IdProvider

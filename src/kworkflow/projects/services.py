@@ -3,9 +3,7 @@ import logging
 import re
 
 from datetime import UTC, datetime
-from uuid import UUID
-
-from uuid6 import uuid7
+from uuid import UUID, uuid7
 
 from kworkflow.auth.id_provider import IdProvider
 from kworkflow.infra.database.transaction_manager import TransactionManager
@@ -185,10 +183,11 @@ class ProjectProposalService:
             return project_proposal
         try:
             project_info = self._build_project_info(project)
-            result, prompt = await self.proposal_generator.generate(
+            result = await self.proposal_generator.generate(
                 freelancer_info=freelancer_profile.about,
                 project_info=project_info,
             )
+            logger.debug(f"RESULT GENERATION: {result}")
         except ProjectProposalGenerationError:
             logger.info(f"Project info: {project_info}")
             logger.info(f"Freelancer info: {freelancer_profile.about}")
@@ -198,8 +197,12 @@ class ProjectProposalService:
             id=uuid7(),
             project_id=project_id,
             user_id=user_id,
-            prompt=prompt,
             generated_text=result.text,
+            prompt=result.prompt,
+            prompt_tokens=result.prompt_tokens,
+            completion_tokens=result.completion_tokens,
+            total_tokens=result.total_tokens,
+            cost=result.cost,
             created_at=datetime.now(UTC),
         )
         await self.project_proposal_gateway.add(project_proposal)

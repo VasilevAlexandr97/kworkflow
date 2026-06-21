@@ -3,7 +3,7 @@ name = "kworkflow"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "aiogram>=3.28.2",
     "alembic>=1.18.4",
@@ -16,7 +16,6 @@ dependencies = [
     "redis[hiredis]>=7.4.0",
     "sqlalchemy>=2.0.49",
     "taskiq-redis>=1.2.2",
-    "uuid6>=2025.0.1",
 ]
 
 [dependency-groups]

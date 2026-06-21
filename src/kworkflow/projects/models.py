@@ -1,10 +1,13 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
     UUID as SA_UUID,
     DateTime,
     ForeignKey,
+    Numeric,
+    text as sa_text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,8 +69,28 @@ class ProjectProposal(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    prompt: Mapped[str]
     generated_text: Mapped[str]
+
+    prompt: Mapped[str]
+    prompt_tokens: Mapped[int] = mapped_column(
+        nullable=False,
+        default=0,
+        server_default=sa_text("0"),
+    )
+    completion_tokens: Mapped[int] = mapped_column(
+        nullable=False,
+        default=0,
+        server_default=sa_text("0"),
+    )
+    total_tokens: Mapped[int] = mapped_column(
+        nullable=False,
+        default=0,
+        server_default=sa_text("0"),
+    )
+    cost: Mapped[Decimal] = mapped_column(
+        Numeric(precision=18, scale=10),
+        server_default=sa_text("0"),
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
