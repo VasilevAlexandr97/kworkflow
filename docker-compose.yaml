@@ -1,26 +1,37 @@
+x-app-build: &app-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: kworkflow-app:latest   # одно имя — образ собирается один раз и переиспользуется
+  env_file:
+    - .env
+
 services:
+  migrations:
+    <<: *app-build
+    command: uv run alembic upgrade head
+    restart: "no"
   telegram_bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    restart: always
+    <<: *app-build
     command: uv run telegram-bot
+    restart: unless-stopped
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    restart: always
+    <<: *app-build
+    stop_grace_period: 30s
+    restart: unless-stopped
     command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
 
   scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    restart: always
+    <<: *app-build
+    stop_grace_period: 30s
+    restart: unless-stopped
     command: uv run taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
+    depends_on:
+      migrations:
+        condition: service_completed_successfully

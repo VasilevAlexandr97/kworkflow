@@ -1,48 +1,17 @@
+x-app-build: &app-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: kworkflow-app:latest # одно имя — образ собирается один раз и переиспользуется
+  env_file:
+    - .env
+
 services:
-  telegram_bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: kworkflow_telegram_bot
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ./src:/app/src
-    command: uv run telegram-bot
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: kworkflow_worker
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ./src:/app/src
-    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
-
-  scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: kworkflow_scheduler
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ./src:/app/src
-    command: uv run taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
-
   postgres:
     image: postgres:18-trixie
     container_name: kworkflow_postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -51,6 +20,12 @@ services:
       - 5432:5432
     volumes:
       - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:8.6.3-trixie
     container_name: kworkflow_redis
@@ -61,6 +36,62 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: redis-cli -a ${REDIS_PASSWORD} ping
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrations:
+    <<: *app-build
+    container_name: kworkflow_migrations
+    volumes:
+      - ./src:/app/src
+    command: uv run alembic upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  telegram_bot:
+    <<: *app-build
+    container_name: kworkflow_telegram_bot
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    volumes:
+      - ./src:/app/src
+    command: uv run telegram-bot
+  worker:
+    <<: *app-build
+    container_name: kworkflow_worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    volumes:
+      - ./src:/app/src
+    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
+
+  scheduler:
+    <<: *app-build
+    container_name: kworkflow_scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    volumes:
+      - ./src:/app/src
+    command: uv run taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
 
 volumes:
   pgdata:
