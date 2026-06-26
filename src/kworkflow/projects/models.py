@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Numeric,
+    func,
     text as sa_text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -48,6 +49,11 @@ class Project(Base):
     title: Mapped[str]
     description: Mapped[str]
     offers: Mapped[int]
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
     category: Mapped[ProjectCategory] = relationship(
         back_populates="projects",
