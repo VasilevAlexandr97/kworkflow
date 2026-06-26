@@ -37,6 +37,11 @@ class UserCategoryFollowService:
         user_id = await self.id_provider.get_current_user_id()
         return await self.follow_gateway.get_followed_categories(user_id)
 
+    async def unfollow_all_categories(self):
+        user_id = await self.id_provider.get_current_user_id()
+        await self.follow_gateway.delete_all(user_id)
+        await self.transaction_manager.commit()
+
     async def sync_user_follows(self, new_follow_ids: list[UUID]):
         user_id = await self.id_provider.get_current_user_id()
         follow_ids = await self.follow_gateway.get_category_follow_ids(user_id)

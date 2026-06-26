@@ -15,7 +15,7 @@ class CatAction(StrEnum):
     BROWSE = "browse"
     FOLLOW = "follow"
     UNFOLLOW = "unfollow"
-    FOLLOW_ALL = "follow_all"
+    UNFOLLOW_ALL = "unfollow_all"
     BACK = "back"
     CONFIRM = "confirm"
 
@@ -52,6 +52,15 @@ def build_follow_categories_kbd(
                 ).pack(),
             ),
         )
+    builder.row(
+        InlineKeyboardButton(
+            text="❌ Отписаться от всех",
+            callback_data=CategoryCB(
+                action=CatAction.UNFOLLOW_ALL,
+                category_id=None,
+            ).pack(),
+        ),
+    )
     builder.row(
         InlineKeyboardButton(
             text="💾 Сохранить",

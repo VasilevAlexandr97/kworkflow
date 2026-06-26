@@ -20,6 +20,7 @@ from kworkflow.telegram_bot.keyboards import (
 from kworkflow.telegram_bot.messages import (
     categories_saved_message,
     select_categories_message,
+    unfollow_all_categories_message,
 )
 from kworkflow.telegram_bot.states import FreelancerProfileState
 
@@ -148,6 +149,22 @@ async def save_category_follow(
     ]
     categories = await service.sync_user_follows(follow_category_ids)
     text = categories_saved_message(categories)
+    keyboard = build_menu_kbd()
+    await call.message.edit_text(text, reply_markup=keyboard)
+    await state.clear()
+
+
+@router.callback_query(
+    CategoryCB.filter(F.action == CatAction.UNFOLLOW_ALL),
+)
+@inject
+async def unfollow_all_categories(
+    call: types.CallbackQuery,
+    service: FromDishka[UserCategoryFollowService],
+    state: FSMContext,
+):
+    await service.unfollow_all_categories()
+    text = unfollow_all_categories_message()
     keyboard = build_menu_kbd()
     await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()

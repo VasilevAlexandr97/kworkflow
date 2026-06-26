@@ -25,6 +25,12 @@ class UserCategoryFollowGateway:
         )
         await self.session.execute(stmt)
 
+    async def delete_all(self, user_id: UUID):
+        stmt = delete(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == user_id,
+        )
+        await self.session.execute(stmt)
+
     async def bulk_insert(self, follows_data: list[dict]):
         stmt = insert(UserCategoryFollow).values(follows_data)
         await self.session.execute(stmt)

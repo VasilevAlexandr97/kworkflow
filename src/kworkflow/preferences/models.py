@@ -1,6 +1,7 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kworkflow.infra.database.base import Base
@@ -17,6 +18,11 @@ class UserCategoryFollow(Base):
         ForeignKey("project_categories.id", ondelete="CASCADE"),
         primary_key=True,
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 class UserFreelancerProfile(Base):
@@ -27,3 +33,8 @@ class UserFreelancerProfile(Base):
         primary_key=True,
     )
     about: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

@@ -89,6 +89,14 @@ def categories_saved_message(follow_categories: list[ProjectCategory]) -> str:
     )
 
 
+def unfollow_all_categories_message() -> str:
+    return (
+        "🗑️ Отписка от всех категорий выполнена.\n\n"
+        "Уведомления о новых проектах приходить не будут.\n"
+        "Чтобы возобновить мониторинг — выберите категории в меню."
+    )
+
+
 def select_categories_message() -> str:
     return "📂 Выберите категории для мониторинга"
 
