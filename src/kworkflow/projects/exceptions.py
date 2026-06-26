@@ -12,3 +12,7 @@ class ProjectNotFoundError(Exception):
 
 class ProjectProposalGenerationError(Exception):
     pass
+
+
+class ProjectProposalGenerationPermissionError(Exception):
+    pass

@@ -1,14 +1,21 @@
 from datetime import datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
     UUID as SA_UUID,
     BigInteger,
     DateTime,
+    ForeignKey,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kworkflow.infra.database.base import Base
+
+
+class Role(StrEnum):
+    USER = "USER"
+    ADMIN = "ADMIN"
 
 
 class User(Base):
@@ -34,6 +41,35 @@ class User(Base):
             "UserModel("
             f"id={self.id}, "
             f"telegram_id={self.telegram_id}, "
+            f"created_at={self.created_at}, "
+            f"updated_at={self.updated_at}"
+            ")"
+        )
+
+
+class UserRole(Base):
+    __tablename__ = "user_roles"
+
+    id: Mapped[UUID] = mapped_column(SA_UUID(as_uuid=True), primary_key=True)
+    name: Mapped[str] = mapped_column(default=Role.USER)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            "UserRole("
+            f"id={self.id}, "
+            f"name={self.name}, "
             f"created_at={self.created_at}, "
             f"updated_at={self.updated_at}"
             ")"

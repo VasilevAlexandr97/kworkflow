@@ -43,7 +43,7 @@ from kworkflow.projects.services import (
     ProjectProposalService,
     ProjectSyncService,
 )
-from kworkflow.users.gateways import UserGateway
+from kworkflow.users.gateways import UserGateway, UserRoleGateway
 
 
 class InfraProvider(Provider):
@@ -123,6 +123,7 @@ class InfraProvider(Provider):
 class UserProvider(Provider):
     user_gateway = provide(UserGateway, scope=Scope.REQUEST)
     # user_service = provide(UserService, scope=Scope.REQUEST)
+    user_role_gateway = provide(UserRoleGateway, scope=Scope.REQUEST)
 
 
 class ProjectProvider(Provider):
@@ -191,11 +192,13 @@ class TelegramBotProvider(Provider):
     def get_id_provider(
         self,
         event: TelegramObject,
-        gateway: UserGateway,
+        user_gateway: UserGateway,
+        user_role_gateway: UserRoleGateway,
     ) -> TelegramIdProvider:
         return TelegramIdProvider(
             telegram_id=event.from_user.id,
-            gateway=gateway,
+            user_gateway=user_gateway,
+            user_role_gateway=user_role_gateway,
         )
 
     telegram_auth = provide(TelegramAuth, scope=Scope.REQUEST)

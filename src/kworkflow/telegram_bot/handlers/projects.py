@@ -4,11 +4,15 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
+from kworkflow.projects.exceptions import (
+    ProjectProposalGenerationPermissionError,
+)
 from kworkflow.projects.services import ProjectProposalService
 from kworkflow.telegram_bot.keyboards import GenerateProposalCB
 from kworkflow.telegram_bot.messages import (
     FREELANCER_PROFILE_TEMPLATE_TEXT,
     GENERATE_PROPOSAL_PROFILE_REQUIRED_TEXT,
+    project_proposal_generation_permission_error_message,
 )
 from kworkflow.telegram_bot.states import (
     FreelancerProfileState,
@@ -39,5 +43,7 @@ async def generate_proposal(
             f"{FREELANCER_PROFILE_TEMPLATE_TEXT}"
         )
         await state.set_state(FreelancerProfileState.edit)
+    except ProjectProposalGenerationPermissionError:
+        text = project_proposal_generation_permission_error_message()
     await call.message.answer(text)
     await call.answer()

@@ -8,3 +8,11 @@ class UserAlreadyExistsError(Exception):
 
 class UserNotFoundError(Exception):
     pass
+
+
+class UserRoleCreationError(Exception):
+    pass
+
+
+class UserRoleNotFoundError(Exception):
+    pass

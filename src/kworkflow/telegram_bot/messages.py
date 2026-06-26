@@ -91,3 +91,10 @@ def categories_saved_message(follow_categories: list[ProjectCategory]) -> str:
 
 def select_categories_message() -> str:
     return "📂 Выберите категории для мониторинга"
+
+
+def project_proposal_generation_permission_error_message() -> str:
+    return (
+        "Упс, пока что генерация доступна не всем пользователям\n\n"
+        "Связаться: @askanonagent"
+    )

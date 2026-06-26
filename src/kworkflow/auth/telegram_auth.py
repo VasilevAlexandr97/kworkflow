@@ -8,8 +8,8 @@ from kworkflow.auth.exceptions import AuthenticationError
 from kworkflow.auth.id_provider import IdProvider
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.users.exceptions import CreateUserError, UserAlreadyExistsError
-from kworkflow.users.gateways import UserGateway
-from kworkflow.users.models import User
+from kworkflow.users.gateways import UserGateway, UserRoleGateway
+from kworkflow.users.models import Role, User, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,12 @@ class TelegramAuth:
     def __init__(
         self,
         user_gateway: UserGateway,
+        user_role_gateway: UserRoleGateway,
         id_provider: IdProvider,
         transaction_manager: TransactionManager,
     ):
         self.user_gateway = user_gateway
+        self.user_role_gateway = user_role_gateway
         self.id_provider = id_provider
         self.transaction_manager = transaction_manager
 
@@ -39,17 +41,24 @@ class TelegramAuth:
             return TelegramAuthResultDTO(user_id=user_id, is_new=False)
         except AuthenticationError:
             pass
-        new_id = uuid7()
         telegram_id = await self.id_provider.get_current_user_telegram_id()
         now = datetime.now(tz=UTC)
         new_user = User(
-            id=new_id,
+            id=uuid7(),
             telegram_id=telegram_id,
+            created_at=now,
+            updated_at=now,
+        )
+        new_user_role = UserRole(
+            id=uuid7(),
+            name=Role.USER,
+            user_id=new_user.id,
             created_at=now,
             updated_at=now,
         )
         try:
             await self.user_gateway.add(new_user)
+            await self.user_role_gateway.add(new_user_role)
             await self.transaction_manager.commit()
         except UserAlreadyExistsError:
             await self.transaction_manager.rollback()
@@ -62,4 +71,4 @@ class TelegramAuth:
             await self.transaction_manager.rollback()
             logger.info(f"User not created: {new_user!r}")
             raise
-        return TelegramAuthResultDTO(user_id=new_id, is_new=True)
+        return TelegramAuthResultDTO(user_id=new_user.id, is_new=True)

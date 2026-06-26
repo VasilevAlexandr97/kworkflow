@@ -13,6 +13,7 @@ from kworkflow.preferences.gateways import UserFreelancerProfileGateway
 from kworkflow.projects.exceptions import (
     ProjectNotFoundError,
     ProjectProposalGenerationError,
+    ProjectProposalGenerationPermissionError,
 )
 from kworkflow.projects.gateway import (
     ProjectCategoryGateway,
@@ -21,6 +22,7 @@ from kworkflow.projects.gateway import (
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
+from kworkflow.users.models import Role
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +169,14 @@ class ProjectProposalService:
 
     async def generate_proposal(self, project_id: UUID) -> ProjectProposal:
         user_id = await self.id_provider.get_current_user_id()
+        user_role = await self.id_provider.get_role()
+        logger.debug(f"USER_ID: {user_id}, USER_ROLE: {user_role}")
+        if user_role != Role.ADMIN:
+            logger.warning(
+                f"User {user_id} (role={user_role}) attempted to generate proposal "
+                f"for project {project_id} — access denied",
+            )
+            raise ProjectProposalGenerationPermissionError
         freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
         if freelancer_profile is None:
             raise UserFreelancerProfileNotFoundError
