@@ -1,3 +1,4 @@
+from aiogram.fsm.context import FSMContext
 from aiogram import F, Router, types
 from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandStart
@@ -21,6 +22,7 @@ async def start_handler(
     message: types.Message,
     auth: FromDishka[TelegramAuth],
     service: FromDishka[UserCategoryFollowService],
+    state: FSMContext,
 ):
     if message.from_user is None:
         return
@@ -36,15 +38,24 @@ async def start_handler(
         text,
         reply_markup=keyboard,
     )
+    await state.clear()
 
 
 @router.message(F.text, Command("menu"))
+@router.callback_query(F.data == "menu")
 @inject
 async def menu_handler(
-    message: types.Message,
+    event: types.Message | types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
+    state: FSMContext,
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
     keyboard = build_menu_kbd()
-    await message.answer(text, reply_markup=keyboard)
+    if isinstance(event, types.Message):
+        await event.answer(text, reply_markup=keyboard)
+    elif isinstance(event, types.CallbackQuery):
+        await event.message.delete()
+        await event.message.answer(text, reply_markup=keyboard)
+        await event.answer()
+    await state.clear()

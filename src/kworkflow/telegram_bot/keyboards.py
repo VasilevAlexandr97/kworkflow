@@ -67,6 +67,12 @@ def build_follow_categories_kbd(
             callback_data=CategoryCB(action=CatAction.CONFIRM).pack(),
         ),
     )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data="menu",
+        ),
+    )
     return builder.as_markup()
 
 
