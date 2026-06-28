@@ -29,6 +29,10 @@ class GenerateProposalCB(CallbackData, prefix="gen_proposal"):
     project_id: UUID
 
 
+class MainMenuCB(CallbackData, prefix="main_menu"):
+    delete_message: bool = False
+
+
 def build_start_kbd() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -70,7 +74,7 @@ def build_follow_categories_kbd(
     builder.row(
         InlineKeyboardButton(
             text="🏚 Меню",
-            callback_data="menu",
+            callback_data=MainMenuCB(delete_message=True).pack(),
         ),
     )
     return builder.as_markup()
@@ -123,8 +127,16 @@ def build_menu_kbd():
 
 def build_project_kbd(project_id: UUID):
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text="✍️ Сгенерировать отклик",
-        callback_data=GenerateProposalCB(project_id=project_id).pack(),
+    builder.row(
+        InlineKeyboardButton(
+            text="✍️ Сгенерировать отклик",
+            callback_data=GenerateProposalCB(project_id=project_id).pack(),
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=False).pack(),
+        ),
     )
     return builder.as_markup()

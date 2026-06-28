@@ -6,7 +6,11 @@ from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.auth.telegram_auth import TelegramAuth
 from kworkflow.preferences.services import UserCategoryFollowService
-from kworkflow.telegram_bot.keyboards import build_menu_kbd, build_start_kbd
+from kworkflow.telegram_bot.keyboards import (
+    build_menu_kbd,
+    build_start_kbd,
+    MainMenuCB,
+)
 from kworkflow.telegram_bot.messages import menu_message, start_message
 
 router = Router()
@@ -42,20 +46,32 @@ async def start_handler(
 
 
 @router.message(F.text, Command("menu"))
-@router.callback_query(F.data == "menu")
 @inject
-async def menu_handler(
-    event: types.Message | types.CallbackQuery,
+async def main_menu_command_handler(
+    message: types.Message,
     service: FromDishka[UserCategoryFollowService],
     state: FSMContext,
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
     keyboard = build_menu_kbd()
-    if isinstance(event, types.Message):
-        await event.answer(text, reply_markup=keyboard)
-    elif isinstance(event, types.CallbackQuery):
-        await event.message.delete()
-        await event.message.answer(text, reply_markup=keyboard)
-        await event.answer()
+    await message.answer(text, reply_markup=keyboard)
     await state.clear()
+
+
+@router.callback_query(MainMenuCB.filter())
+@inject
+async def main_menu_cb_handler(
+    call: types.CallbackQuery,
+    service: FromDishka[UserCategoryFollowService],
+    state: FSMContext,
+    callback_data: MainMenuCB,
+):
+    categories = await service.get_followed_categories()
+    text = menu_message(categories)
+    keyboard = build_menu_kbd()
+    if callback_data.delete_message:
+        await call.message.delete()
+    await call.message.answer(text, reply_markup=keyboard)
+    await state.clear()
+    await call.answer()
