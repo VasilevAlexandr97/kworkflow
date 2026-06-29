@@ -1,13 +1,16 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from kworkflow.auth.id_provider import IdProvider
 from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.preferences.consts import MAX_LENGTH_STOP_WORD, MAX_STOP_WORDS
 from kworkflow.preferences.dto import CategoryFollowStatusDTO
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserFreelancerProfileGateway,
+    UserStopWordsGateway,
 )
-from kworkflow.preferences.models import UserFreelancerProfile
+from kworkflow.preferences.models import UserFreelancerProfile, UserStopWord
 from kworkflow.projects.gateway import ProjectCategoryGateway
 from kworkflow.projects.models import ProjectCategory
 
@@ -95,3 +98,59 @@ class UserFreelancerProfileService:
             await self.profile_gateway.add(profile)
         await self.transaction_manager.commit()
         return profile
+
+
+class UserStopWordsService:
+    def __init__(
+        self,
+        stop_words_gateway: UserStopWordsGateway,
+        id_provider: IdProvider,
+        transaction_manager: TransactionManager,
+    ):
+        self.stop_words_gateway = stop_words_gateway
+        self.id_provider = id_provider
+        self.transaction_manager = transaction_manager
+
+    async def add_stop_words(self, words: list[str]) -> list[str]:
+        user_id = await self.id_provider.get_current_user_id()
+        count = await self.stop_words_gateway.count_stop_words_by_user_id(
+            user_id,
+        )
+        available = MAX_STOP_WORDS - count
+        if available <= 0:
+            return await self.stop_words_gateway.get_stop_words_by_user_id(
+                user_id,
+            )
+        now = datetime.now(UTC)
+        stop_words = [
+            UserStopWord(
+                user_id=user_id,
+                word=word.lower().strip(),
+                created_at=now,
+            )
+            for word in words
+            if word.strip() and len(word.strip()) <= MAX_LENGTH_STOP_WORD
+        ]
+        stop_words = stop_words[:available]
+        if stop_words:
+            await self.stop_words_gateway.add_batch(stop_words)
+            await self.transaction_manager.commit()
+        return await self.stop_words_gateway.get_stop_words_by_user_id(user_id)
+
+    async def delete_stop_words(self, words: list[str]) -> list[str]:
+        user_id = await self.id_provider.get_current_user_id()
+        stop_words = [word.lower().strip() for word in words]
+        if stop_words:
+            await self.stop_words_gateway.delete_batch(user_id, stop_words)
+            await self.transaction_manager.commit()
+        return await self.stop_words_gateway.get_stop_words_by_user_id(user_id)
+
+    async def get_stop_words(self) -> list[str]:
+        user_id = await self.id_provider.get_current_user_id()
+        return await self.stop_words_gateway.get_stop_words_by_user_id(user_id)
+
+    async def count_stop_words(self) -> int:
+        user_id = await self.id_provider.get_current_user_id()
+        return await self.stop_words_gateway.count_stop_words_by_user_id(
+            user_id,
+        )

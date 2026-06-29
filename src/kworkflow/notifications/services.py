@@ -11,7 +11,10 @@ from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.models import ProjectNotification
-from kworkflow.preferences.gateways import UserCategoryFollowGateway
+from kworkflow.preferences.gateways import (
+    UserCategoryFollowGateway,
+    UserStopWordsGateway,
+)
 from kworkflow.projects.gateway import ProjectGateway
 from kworkflow.telegram_bot.keyboards import build_project_kbd
 from kworkflow.telegram_bot.messages import project_message
@@ -24,6 +27,7 @@ class ProjectNotificationService:
         self,
         project_gateway: ProjectGateway,
         follow_gateway: UserCategoryFollowGateway,
+        stop_words_gateway: UserStopWordsGateway,
         notification_gateway: ProjectNotificationGateway,
         telegram_notifier: TelegramNotifier,
         transaction_manager: TransactionManager,
@@ -31,11 +35,18 @@ class ProjectNotificationService:
     ):
         self.project_gateway = project_gateway
         self.follow_gateway = follow_gateway
+        self.stop_words_gateway = stop_words_gateway
         self.notification_gateway = notification_gateway
         self.telegram_notifier = telegram_notifier
         self.transaction_manager = transaction_manager
         self.redis = redis
         self.lock = Lock(self.redis, "project_notification", timeout=600)
+
+    def _contains_stop_word(self, text: str, stop_words: list[str]) -> bool:
+        if not stop_words:
+            return False
+        text_lower = text.lower()
+        return any(sw.lower() in text_lower for sw in stop_words)
 
     async def notify_new_projects(self, project_ids: list[UUID]):
         projects = await self.project_gateway.get_projects_by_ids(
@@ -48,12 +59,24 @@ class ProjectNotificationService:
 
         async with self.lock:
             for project in projects:
+                if not project.category_id:
+                    continue
                 users = (
                     await self.follow_gateway.get_users_followed_to_category(
                         project.category_id,
                     )
                 )
+                user_ids = [user.id for user in users]
+                stop_words_map = (
+                    await self.stop_words_gateway.get_stop_words_by_user_ids(
+                        user_ids,
+                    )
+                )
+                project_text = f"{project.title} {project.description}"
                 for user in users:
+                    user_stop_words = stop_words_map.get(user.id, [])
+                    if self._contains_stop_word(project_text, user_stop_words):
+                        continue
                     try:
                         await self.telegram_notifier.send_message(
                             user.telegram_id,

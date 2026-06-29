@@ -1,3 +1,4 @@
+from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.projects.models import Project, ProjectCategory
 
 
@@ -95,6 +96,57 @@ def unfollow_all_categories_message() -> str:
         "Уведомления о новых проектах приходить не будут.\n"
         "Чтобы возобновить мониторинг — выберите категории в меню."
     )
+
+
+def stop_words_menu_message(words: list[str]) -> str:
+    stop_words_list = "\n".join(
+        f"{i}. {word}" for i, word in enumerate(words, start=1)
+    )
+    return (
+        "🛑 <b>Стоп-слова</b>\n\n"
+        "Стоп-слова — это фильтр для уведомлений.\n\n"
+        "Если в названии или описании нового проекта "
+        "встретится такое слово — вы <b>не получите</b> "
+        "уведомление об этом проекте.\n\n"
+        f"📝 Ваши стоп-слова ({len(words)}/{MAX_STOP_WORDS})\n\n"
+        f"{stop_words_list}"
+    )
+
+
+def start_add_stop_words_message() -> str:
+    return (
+        "✏️ <b>Добавление стоп-слов</b>\n\n"
+        "Введите одно или несколько слов через запятую.\n\n"
+        "Проекты, содержащие эти слова в названии или описании, "
+        "не будут приходить вам в уведомления.\n\n"
+        "<b>Пример:</b>\n"
+        "работа, тест, копирайтинг, telegram\n\n"
+        'Чтобы отменить — нажмите кнопку "✖️ Отмена"'
+    )
+
+
+def start_delete_stop_words_message(words: list[str]) -> str:
+    stop_words_list = "\n".join(
+        f"{i}. {word}" for i, word in enumerate(words, start=1)
+    )
+    return (
+        "🗑 <b>Удаление стоп-слов</b>\n\n"
+        "Введите одно или несколько слов через запятую, "
+        "которые хотите удалить из стоп-листа.\n\n"
+        "<b>Текущие стоп-слова:</b>\n"
+        f"{stop_words_list}\n\n"
+        "<b>Пример:</b>\n"
+        "тест, копирайтинг\n\n"
+        'Чтобы отменить — нажмите кнопку "✖️ Отмена"'
+    )
+
+
+def empty_stop_words_delete_message() -> str:
+    return "У вас пока нет стоп-слов, поэтому удалять нечего."
+
+
+def stop_words_limit_exceeded_message() -> str:
+    return f"❌ Достигнут лимит в {MAX_STOP_WORDS} стоп-слов."
 
 
 def select_categories_message() -> str:

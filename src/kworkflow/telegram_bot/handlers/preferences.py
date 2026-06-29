@@ -1,13 +1,18 @@
+import contextlib
+
 from uuid import UUID
 
-from aiogram import F, Router, types
+from aiogram import Bot, F, Router, types
 from aiogram.enums import ChatType
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
+from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.preferences.services import (
     UserCategoryFollowService,
     UserFreelancerProfileService,
+    UserStopWordsService,
 )
 from kworkflow.projects.services import ProjectCategoryService
 from kworkflow.telegram_bot.keyboards import (
@@ -15,14 +20,25 @@ from kworkflow.telegram_bot.keyboards import (
     CategoryCB,
     build_follow_categories_kbd,
     build_follow_subcategories_kbd,
-    build_menu_kbd,
+    build_main_menu_kbd,
+    build_start_add_stop_words_kbd,
+    build_start_delete_stop_words_kbd,
+    build_stop_words_menu_kbd,
 )
 from kworkflow.telegram_bot.messages import (
     categories_saved_message,
+    empty_stop_words_delete_message,
     select_categories_message,
+    start_add_stop_words_message,
+    start_delete_stop_words_message,
+    stop_words_limit_exceeded_message,
+    stop_words_menu_message,
     unfollow_all_categories_message,
 )
-from kworkflow.telegram_bot.states import FreelancerProfileState
+from kworkflow.telegram_bot.states import (
+    FreelancerProfileState,
+    StopWordsState,
+)
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -149,7 +165,7 @@ async def save_category_follow(
     ]
     categories = await service.sync_user_follows(follow_category_ids)
     text = categories_saved_message(categories)
-    keyboard = build_menu_kbd()
+    keyboard = build_main_menu_kbd()
     await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
 
@@ -165,7 +181,7 @@ async def unfollow_all_categories(
 ):
     await service.unfollow_all_categories()
     text = unfollow_all_categories_message()
-    keyboard = build_menu_kbd()
+    keyboard = build_main_menu_kbd()
     await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
 
@@ -182,4 +198,100 @@ async def edit_freelancer_profile(
     profile_text = message.text
     await service.edit_or_create_profile(profile_text)
     await message.answer("✅ Профиль сохранен.")
+    await state.clear()
+
+
+@router.callback_query(F.data == "stop_words_menu")
+@router.callback_query(F.data == "cancel_add_stop_words")
+@router.callback_query(F.data == "cancel_delete_stop_words")
+@inject
+async def stop_words_menu(
+    call: types.CallbackQuery,
+    service: FromDishka[UserStopWordsService],
+    state: FSMContext,
+):
+    user_stop_words = await service.get_stop_words()
+    text = stop_words_menu_message(user_stop_words)
+    keyboard = build_stop_words_menu_kbd()
+    await call.message.edit_text(text, reply_markup=keyboard)
+    await state.clear()
+
+
+@router.callback_query(F.data == "add_stop_words")
+@inject
+async def start_add_stop_words(
+    call: types.CallbackQuery,
+    service: FromDishka[UserStopWordsService],
+    state: FSMContext,
+):
+    count_user_stop_words = await service.count_stop_words()
+    if count_user_stop_words >= MAX_STOP_WORDS:
+        text = stop_words_limit_exceeded_message()
+        await call.answer(text, show_alert=True)
+    else:
+        text = start_add_stop_words_message()
+        keyboard = build_start_add_stop_words_kbd()
+        await state.set_data({"last_message_id": call.message.message_id})
+        await state.set_state(StopWordsState.add)
+        await call.message.edit_text(text, reply_markup=keyboard)
+
+
+@router.message(StopWordsState.add)
+@inject
+async def add_stop_words(
+    message: types.Message,
+    service: FromDishka[UserStopWordsService],
+    state: FSMContext,
+    bot: FromDishka[Bot],
+):
+    state_data = await state.get_data()
+    last_message_id = state_data.get("last_message_id")
+    stop_words = message.text.split(",")
+    user_stop_words = await service.add_stop_words(stop_words)
+    text = stop_words_menu_message(words=user_stop_words)
+    keyboard = build_stop_words_menu_kbd()
+    if last_message_id is not None:
+        with contextlib.suppress(TelegramBadRequest):
+            await bot.delete_message(message.from_user.id, last_message_id)
+    await message.answer(text, reply_markup=keyboard)
+    await state.clear()
+
+
+@router.callback_query(F.data == "delete_stop_words")
+@inject
+async def start_delete_stop_words(
+    call: types.CallbackQuery,
+    service: FromDishka[UserStopWordsService],
+    state: FSMContext,
+):
+    stop_words = await service.get_stop_words()
+    if not stop_words:
+        text = empty_stop_words_delete_message()
+        await call.answer(text, show_alert=True)
+    else:
+        text = start_delete_stop_words_message(stop_words)
+        keyboard = build_start_delete_stop_words_kbd()
+        await state.set_data({"last_message_id": call.message.message_id})
+        await state.set_state(StopWordsState.delete)
+        await call.message.edit_text(text, reply_markup=keyboard)
+
+
+@router.message(StopWordsState.delete)
+@inject
+async def delete_stop_words(
+    message: types.Message,
+    service: FromDishka[UserStopWordsService],
+    state: FSMContext,
+    bot: FromDishka[Bot],
+):
+    state_data = await state.get_data()
+    last_message_id = state_data.get("last_message_id")
+    stop_words = message.text.split(",")
+    user_stop_words = await service.delete_stop_words(stop_words)
+    text = stop_words_menu_message(words=user_stop_words)
+    keyboard = build_stop_words_menu_kbd()
+    if last_message_id is not None:
+        with contextlib.suppress(TelegramBadRequest):
+            await bot.delete_message(message.from_user.id, last_message_id)
+    await message.answer(text, reply_markup=keyboard)
     await state.clear()

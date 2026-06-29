@@ -1,12 +1,15 @@
 from uuid import UUID
 
 from sqlalchemy import and_, case, delete, insert, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import functions
 
 from kworkflow.preferences.dto import CategoryFollowStatusDTO
 from kworkflow.preferences.models import (
     UserCategoryFollow,
     UserFreelancerProfile,
+    UserStopWord,
 )
 from kworkflow.projects.models import ProjectCategory
 from kworkflow.users.models import User
@@ -116,3 +119,68 @@ class UserFreelancerProfileGateway:
             UserFreelancerProfile.user_id == user_id,
         )
         return await self.session.scalar(stmt)
+
+
+class UserStopWordsGateway:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add_batch(self, words: list[UserStopWord]):
+        values = [
+            {
+                "user_id": word.user_id,
+                "word": word.word,
+                "created_at": word.created_at,
+            }
+            for word in words
+        ]
+        stmt = (
+            pg_insert(UserStopWord)
+            .values(values)
+            .on_conflict_do_nothing(index_elements=["user_id", "word"])
+        )
+        await self.session.execute(stmt)
+
+    async def delete_batch(self, user_id: UUID, words: list[str]):
+        stmt = delete(UserStopWord).where(
+            and_(
+                UserStopWord.user_id == user_id,
+                UserStopWord.word.in_(words),
+            ),
+        )
+        await self.session.execute(stmt)
+
+    async def get_stop_words_by_user_id(self, user_id: UUID) -> list[str]:
+        stmt = (
+            select(UserStopWord.word)
+            .where(UserStopWord.user_id == user_id)
+            .order_by(UserStopWord.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+        return [row[0] for row in rows]
+
+    async def count_stop_words_by_user_id(self, user_id: UUID) -> int:
+        stmt = select(functions.count(UserStopWord.word)).where(
+            UserStopWord.user_id == user_id,
+        )
+        result = await self.session.scalar(stmt)
+        if result is None:
+            return 0
+        return result
+
+    async def get_stop_words_by_user_ids(
+        self, user_ids: list[UUID],
+    ) -> dict[UUID, list[str]]:
+        if not user_ids:
+            return {}
+        stmt = select(UserStopWord.user_id, UserStopWord.word).where(
+            UserStopWord.user_id.in_(user_ids)
+        ).order_by(UserStopWord.created_at.asc())
+
+        result = await self.session.execute(stmt)
+        rows = result.all()
+        stop_words_map: dict[UUID, list[str]] = {}
+        for user_id, word in rows:
+            stop_words_map.setdefault(user_id, []).append(word)
+        return stop_words_map

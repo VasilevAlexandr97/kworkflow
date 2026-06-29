@@ -7,7 +7,7 @@ from dishka.integrations.aiogram import FromDishka, inject
 from kworkflow.auth.telegram_auth import TelegramAuth
 from kworkflow.preferences.services import UserCategoryFollowService
 from kworkflow.telegram_bot.keyboards import (
-    build_menu_kbd,
+    build_main_menu_kbd,
     build_start_kbd,
     MainMenuCB,
 )
@@ -37,7 +37,7 @@ async def start_handler(
     else:
         categories = await service.get_followed_categories()
         text = menu_message(categories)
-        keyboard = build_menu_kbd()
+        keyboard = build_main_menu_kbd()
     await message.answer(
         text,
         reply_markup=keyboard,
@@ -54,7 +54,7 @@ async def main_menu_command_handler(
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
-    keyboard = build_menu_kbd()
+    keyboard = build_main_menu_kbd()
     await message.answer(text, reply_markup=keyboard)
     await state.clear()
 
@@ -69,7 +69,7 @@ async def main_menu_cb_handler(
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
-    keyboard = build_menu_kbd()
+    keyboard = build_main_menu_kbd()
     if callback_data.delete_message:
         await call.message.delete()
     await call.message.answer(text, reply_markup=keyboard)

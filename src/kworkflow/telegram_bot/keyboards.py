@@ -42,6 +42,23 @@ def build_start_kbd() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def build_main_menu_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📂 Категории",
+            callback_data=CategoryCB(action=CatAction.BROWSE).pack(),
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🛑 Стоп слова",
+            callback_data="stop_words_menu",
+        ),
+    )
+    return builder.as_markup()
+
+
 def build_follow_categories_kbd(
     categories: list[ProjectCategory],
 ) -> InlineKeyboardMarkup:
@@ -116,11 +133,45 @@ def build_follow_subcategories_kbd(
     return builder.as_markup()
 
 
-def build_menu_kbd():
+def build_stop_words_menu_kbd():
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text="📂 Категории",
-        callback_data=CategoryCB(action=CatAction.BROWSE).pack(),
+    builder.row(
+        InlineKeyboardButton(
+            text="➕ Добавить",
+            callback_data="add_stop_words",
+        ),
+        InlineKeyboardButton(
+            text="➖ Удалить",
+            callback_data="delete_stop_words",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_start_add_stop_words_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✖️ Отмена",
+            callback_data="cancel_add_stop_words",
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_start_delete_stop_words_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✖️ Отмена",
+            callback_data="cancel_delete_stop_words",
+        ),
     )
     return builder.as_markup()
 
