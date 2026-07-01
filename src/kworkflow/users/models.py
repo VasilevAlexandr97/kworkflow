@@ -8,7 +8,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kworkflow.infra.database.base import Base
 
@@ -34,6 +34,11 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+    )
+
+    proposals: Mapped[list["ProjectProposal"]] = relationship(
+        back_populates="user",
+        passive_deletes=True,
     )
 
     def __repr__(self) -> str:

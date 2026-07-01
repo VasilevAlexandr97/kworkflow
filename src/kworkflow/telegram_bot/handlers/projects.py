@@ -7,7 +7,9 @@ from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
 from kworkflow.projects.exceptions import (
     ProjectProposalGenerationPermissionError,
 )
-from kworkflow.projects.services import ProjectProposalService
+from kworkflow.projects.services import (
+    ProjectProposalRequestService,
+)
 from kworkflow.telegram_bot.keyboards import GenerateProposalCB
 from kworkflow.telegram_bot.messages import (
     FREELANCER_PROFILE_TEMPLATE_TEXT,
@@ -27,15 +29,15 @@ router.callback_query.filter(
 
 @router.callback_query(GenerateProposalCB.filter())
 @inject
-async def generate_proposal(
+async def generate_proposal_request(
     call: types.CallbackQuery,
     callback_data: GenerateProposalCB,
-    service: FromDishka[ProjectProposalService],
+    service: FromDishka[ProjectProposalRequestService],
     state: FSMContext,
 ):
     try:
-        result = await service.generate_proposal(callback_data.project_id)
-        text = result.generated_text
+        await service.request_generation(callback_data.project_id)
+        await call.answer("Генерирую", show_alert=True)
     except UserFreelancerProfileNotFoundError:
         text = (
             f"{GENERATE_PROPOSAL_PROFILE_REQUIRED_TEXT}"
@@ -43,7 +45,8 @@ async def generate_proposal(
             f"{FREELANCER_PROFILE_TEMPLATE_TEXT}"
         )
         await state.set_state(FreelancerProfileState.edit)
+        await call.message.answer(text)
     except ProjectProposalGenerationPermissionError:
         text = project_proposal_generation_permission_error_message()
-    await call.message.answer(text)
-    await call.answer()
+        await call.message.answer(text)
+        await call.answer()

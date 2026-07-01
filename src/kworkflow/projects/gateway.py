@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
 
@@ -123,13 +123,30 @@ class ProjectProposalGateway:
 
     async def get(
         self,
-        project_id: UUID,
         user_id: UUID,
+        project_id: UUID,
     ) -> ProjectProposal | None:
         stmt = select(ProjectProposal).where(
             and_(
-                ProjectProposal.project_id == project_id,
                 ProjectProposal.user_id == user_id,
+                ProjectProposal.project_id == project_id,
             ),
+        )
+        return await self.session.scalar(stmt)
+
+    async def get_with_user(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+    ) -> ProjectProposal | None:
+        stmt = (
+            select(ProjectProposal)
+            .options(joinedload(ProjectProposal.user))
+            .where(
+                and_(
+                    ProjectProposal.user_id == user_id,
+                    ProjectProposal.project_id == project_id,
+                ),
+            )
         )
         return await self.session.scalar(stmt)

@@ -10,6 +10,7 @@ from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 from kworkflow.main.config import Config, config
 from kworkflow.main.di import (
     InfraProvider,
+    NotificationProvider,
     PreferenceProvider,
     ProjectProvider,
     TelegramBotProvider,
@@ -33,6 +34,7 @@ container = make_async_container(
     UserProvider(),
     ProjectProvider(),
     PreferenceProvider(),
+    NotificationProvider(),
     AiogramProvider(),
     TelegramBotProvider(),
     context={Config: config, Bot: bot},

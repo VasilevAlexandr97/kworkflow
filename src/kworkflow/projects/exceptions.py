@@ -10,6 +10,10 @@ class ProjectNotFoundError(Exception):
     pass
 
 
+class ProjectProposalNotFoundError(Exception):
+    pass
+
+
 class ProjectProposalGenerationError(Exception):
     pass
 

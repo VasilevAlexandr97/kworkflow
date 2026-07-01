@@ -8,6 +8,9 @@ from uuid import UUID, uuid7
 from kworkflow.auth.id_provider import IdProvider
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
+from kworkflow.notifications.interfaces import (
+    ProposalGeneratedNotificationQueue,
+)
 from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
 from kworkflow.preferences.gateways import UserFreelancerProfileGateway
 from kworkflow.projects.exceptions import (
@@ -21,7 +24,11 @@ from kworkflow.projects.gateway import (
     ProjectProposalGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
+from kworkflow.projects.interfaces import (
+    ProposalGenerationQueue,
+)
 from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
+from kworkflow.users.gateways import UserRoleGateway
 from kworkflow.users.models import Role
 
 logger = logging.getLogger(__name__)
@@ -147,36 +154,75 @@ class ProjectSyncService:
         return [project.id for project in new_projects]
 
 
-class ProjectProposalService:
+class ProjectProposalRequestService:
     def __init__(
         self,
-        id_provider: IdProvider,
         project_gateway: ProjectGateway,
-        project_proposal_gateway: ProjectProposalGateway,
         freelancer_profile_gateway: UserFreelancerProfileGateway,
-        proposal_generator: ProjectProposalGenerator,
-        transaction_manager: TransactionManager,
+        proposal_generation_queue: ProposalGenerationQueue,
+        id_provider: IdProvider,
     ):
-        self.id_provider = id_provider
         self.project_gateway = project_gateway
-        self.project_proposal_gateway = project_proposal_gateway
         self.freelancer_profile_gateway = freelancer_profile_gateway
-        self.proposal_generator = proposal_generator
-        self.transaction_manager = transaction_manager
+        self.proposal_generation_queue = proposal_generation_queue
+        self.id_provider = id_provider
 
-    def _build_project_info(self, project: Project) -> str:
-        return f"Название: {project.title}\n\nЗадание: {project.description}"
-
-    async def generate_proposal(self, project_id: UUID) -> ProjectProposal:
+    async def request_generation(self, project_id: UUID):
         user_id = await self.id_provider.get_current_user_id()
         user_role = await self.id_provider.get_role()
-        logger.debug(f"USER_ID: {user_id}, USER_ROLE: {user_role}")
         if user_role != Role.ADMIN:
             logger.warning(
                 f"User {user_id} (role={user_role}) attempted to generate proposal "
                 f"for project {project_id} — access denied",
             )
             raise ProjectProposalGenerationPermissionError
+        project = await self.project_gateway.get_by_id(project_id=project_id)
+        if not project:
+            raise ProjectNotFoundError
+        freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
+        if freelancer_profile is None:
+            raise UserFreelancerProfileNotFoundError
+        await self.proposal_generation_queue.enqueue(
+            user_id=user_id,
+            project_id=project_id,
+        )
+
+
+class ProjectProposalGenerationService:
+    def __init__(
+        self,
+        user_role_gateway: UserRoleGateway,
+        project_gateway: ProjectGateway,
+        project_proposal_gateway: ProjectProposalGateway,
+        freelancer_profile_gateway: UserFreelancerProfileGateway,
+        proposal_generator: ProjectProposalGenerator,
+        transaction_manager: TransactionManager,
+        notify_queue: ProposalGeneratedNotificationQueue,
+    ):
+        self.user_role_gateway = user_role_gateway
+        self.project_gateway = project_gateway
+        self.project_proposal_gateway = project_proposal_gateway
+        self.freelancer_profile_gateway = freelancer_profile_gateway
+        self.proposal_generator = proposal_generator
+        self.transaction_manager = transaction_manager
+        self.notify_queue = notify_queue
+
+    def _build_project_info(self, project: Project) -> str:
+        return f"Название: {project.title}\n\nЗадание: {project.description}"
+
+    async def generate_proposal_for_user(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+    ) -> ProjectProposal:
+        user_role = await self.user_role_gateway.get_role_by_user_id(user_id)
+        if user_role != Role.ADMIN:
+            logger.warning(
+                f"User {user_id} (role={user_role}) attempted to generate proposal "
+                f"for project {project_id} — access denied",
+            )
+            raise ProjectProposalGenerationPermissionError
+        logger.debug(f"USER_ID: {user_id}, USER_ROLE: {user_role}")
         freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
         if freelancer_profile is None:
             raise UserFreelancerProfileNotFoundError
@@ -186,10 +232,14 @@ class ProjectProposalService:
             raise ProjectNotFoundError
 
         project_proposal = await self.project_proposal_gateway.get(
-            project_id=project_id,
             user_id=user_id,
+            project_id=project_id,
         )
         if project_proposal:
+            await self.notify_queue.enqueue(
+                user_id=user_id,
+                project_id=project_id,
+            )
             return project_proposal
         try:
             project_info = self._build_project_info(project)
@@ -204,7 +254,6 @@ class ProjectProposalService:
             logger.info("Project proposal generation error")
             raise
         project_proposal = ProjectProposal(
-            id=uuid7(),
             project_id=project_id,
             user_id=user_id,
             generated_text=result.text,
@@ -217,4 +266,6 @@ class ProjectProposalService:
         )
         await self.project_proposal_gateway.add(project_proposal)
         await self.transaction_manager.commit()
+        # TODO: Что если упадет enqueue или сам таск, продумать
+        await self.notify_queue.enqueue(user_id=user_id, project_id=project_id)
         return project_proposal

@@ -1,3 +1,6 @@
+from kworkflow.projects.exceptions import ProjectProposalNotFoundError
+from kworkflow.users.exceptions import UserNotFoundError
+from kworkflow.users.gateways import UserGateway
 import asyncio
 import logging
 
@@ -15,7 +18,7 @@ from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
-from kworkflow.projects.gateway import ProjectGateway
+from kworkflow.projects.gateway import ProjectGateway, ProjectProposalGateway
 from kworkflow.telegram_bot.keyboards import build_project_kbd
 from kworkflow.telegram_bot.messages import project_message
 
@@ -97,3 +100,27 @@ class ProjectNotificationService:
         if project_notifications:
             await self.notification_gateway.bulk_insert(project_notifications)
             await self.transaction_manager.commit()
+
+
+class ProjectProposalNotificationService:
+    def __init__(
+        self,
+        proposal_gateway: ProjectProposalGateway,
+        telegram_notifier: TelegramNotifier,
+    ):
+        self.proposal_gateway = proposal_gateway
+        self.telegram_notifier = telegram_notifier
+
+    async def notify_generated(self, user_id: UUID, project_id: UUID):
+        logger.info(f"NOTIFY PROJECT PROPOSAL: user_id={user_id}, project_id: {project_id}")
+        proposal = await self.proposal_gateway.get_with_user(
+            user_id=user_id,
+            project_id=project_id,
+        )
+        if not proposal:
+            raise ProjectProposalNotFoundError
+
+        await self.telegram_notifier.send_message(
+            chat_id=proposal.user.telegram_id,
+            text=proposal.generated_text,
+        )

@@ -66,14 +66,15 @@ class Project(Base):
 class ProjectProposal(Base):
     __tablename__ = "project_proposals"
 
-    id: Mapped[UUID] = mapped_column(SA_UUID(as_uuid=True), primary_key=True)
     project_id: Mapped[UUID] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
+        primary_key=True,
     )
     user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        primary_key=True,
     )
     generated_text: Mapped[str]
 
@@ -102,3 +103,5 @@ class ProjectProposal(Base):
         DateTime(timezone=True),
         nullable=False,
     )
+
+    user: Mapped["User"] = relationship(back_populates="proposals", lazy="raise")

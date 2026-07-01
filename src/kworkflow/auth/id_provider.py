@@ -41,7 +41,7 @@ class TelegramIdProvider(IdProvider):
         return user.id
 
     async def get_role(self) -> Role:
-        return await self.user_role_gateway.get_user_role_by_telegram_id(
+        return await self.user_role_gateway.get_role_by_telegram_id(
             telegram_id=self.telegram_id,
         )
 

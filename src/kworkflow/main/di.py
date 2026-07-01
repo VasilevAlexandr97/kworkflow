@@ -20,10 +20,20 @@ from kworkflow.auth.id_provider import (
 from kworkflow.auth.telegram_auth import TelegramAuth
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
+from kworkflow.infra.taskiq.queue import (
+    TaskiqProposalGeneratedNotificationQueue,
+    TaskiqProposalGenerationQueue,
+)
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
-from kworkflow.notifications.services import ProjectNotificationService
+from kworkflow.notifications.interfaces import (
+    ProposalGeneratedNotificationQueue,
+)
+from kworkflow.notifications.services import (
+    ProjectNotificationService,
+    ProjectProposalNotificationService,
+)
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserFreelancerProfileGateway,
@@ -40,9 +50,11 @@ from kworkflow.projects.gateway import (
     ProjectProposalGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
+from kworkflow.projects.interfaces import ProposalGenerationQueue
 from kworkflow.projects.services import (
     ProjectCategoryService,
-    ProjectProposalService,
+    ProjectProposalGenerationService,
+    ProjectProposalRequestService,
     ProjectSyncService,
 )
 from kworkflow.users.gateways import UserGateway, UserRoleGateway
@@ -153,9 +165,19 @@ class ProjectProvider(Provider):
         ProjectProposalGenerator,
         scope=Scope.REQUEST,
     )
-    project_proposal_service = provide(
-        ProjectProposalService,
+    project_proposal_request_service = provide(
+        ProjectProposalRequestService,
         scope=Scope.REQUEST,
+    )
+    project_proposal_generation_service = provide(
+        ProjectProposalGenerationService,
+        scope=Scope.REQUEST,
+    )
+    # TODO: подумать какой scope нужен для queue классов
+    proposal_generation_queue = provide(
+        TaskiqProposalGenerationQueue,
+        scope=Scope.REQUEST,
+        provides=ProposalGenerationQueue,
     )
 
 
@@ -194,6 +216,15 @@ class NotificationProvider(Provider):
     project_notification_service = provide(
         ProjectNotificationService,
         scope=Scope.REQUEST,
+    )
+    project_proposal_notification_service = provide(
+        ProjectProposalNotificationService,
+        scope=Scope.REQUEST,
+    )
+    proposal_notification_queue = provide(
+        TaskiqProposalGeneratedNotificationQueue,
+        scope=Scope.REQUEST,
+        provides=ProposalGeneratedNotificationQueue,
     )
 
 
