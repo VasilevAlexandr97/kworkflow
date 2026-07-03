@@ -18,10 +18,10 @@ from kworkflow.main.di import (
     WorkerProvider,
 )
 
-logger = logging.getLogger(__name__)
-
 config = get_config()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 bot = Bot(token=config.telegram_bot.token)
 container = make_async_container(

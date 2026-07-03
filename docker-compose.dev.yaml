@@ -77,7 +77,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./src:/app/src
-    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
+    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1 --log-level DEBUG
 
   scheduler:
     <<: *app-build

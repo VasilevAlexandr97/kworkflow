@@ -1,6 +1,7 @@
+from datetime import datetime, UTC
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -10,6 +11,7 @@ from kworkflow.projects.models import (
     ProjectCategory,
     ProjectProposal,
     ProjectProposalRequest,
+    ProjectProposalRequestStatus,
 )
 
 
@@ -148,6 +150,65 @@ class ProjectProposalRequestGateway:
         )
         result = await self.session.scalar(stmt)
         return result is not None
+
+    async def mark_as_processing_if_pending(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+    ) -> bool:
+        stmt = (
+            update(ProjectProposalRequest)
+            .where(
+                ProjectProposalRequest.user_id == user_id,
+                ProjectProposalRequest.project_id == project_id,
+                ProjectProposalRequest.status
+                == ProjectProposalRequestStatus.PENDING,
+            )
+            .values(
+                status=ProjectProposalRequestStatus.PROCESSING,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.rowcount > 0
+
+    async def mark_as_generated(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+    ):
+        stmt = (
+            update(ProjectProposalRequest)
+            .where(
+                ProjectProposalRequest.user_id == user_id,
+                ProjectProposalRequest.project_id == project_id,
+            )
+            .values(
+                status=ProjectProposalRequestStatus.GENERATED,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        await self.session.execute(stmt)
+
+    async def mark_as_failed(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+        error_text: str,
+    ):
+        stmt = (
+            update(ProjectProposalRequest)
+            .where(
+                ProjectProposalRequest.user_id == user_id,
+                ProjectProposalRequest.project_id == project_id,
+            )
+            .values(
+                status=ProjectProposalRequestStatus.FAILED,
+                error=error_text,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        await self.session.execute(stmt)
 
 
 class ProjectProposalGateway:

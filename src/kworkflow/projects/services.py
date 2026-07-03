@@ -1,3 +1,4 @@
+import traceback
 import html
 import logging
 import re
@@ -191,9 +192,9 @@ class ProjectProposalRequestService:
         project_id: UUID,
     ) -> ProjectProposalGenerationRequestResult:
         """
-            Идемпотентно регистрирует запрос на генерацию:
-            если отклик уже готов, возвращает его сразу;
-            если генерация уже запрошена, не ставит повторную задачу.
+        Идемпотентно регистрирует запрос на генерацию:
+        если отклик уже готов, возвращает его сразу;
+        если генерация уже запрошена, не ставит повторную задачу.
         """
         user_id = await self.id_provider.get_current_user_id()
         user_role = await self.id_provider.get_role()
@@ -254,6 +255,7 @@ class ProjectProposalGenerationService:
         user_role_gateway: UserRoleGateway,
         project_gateway: ProjectGateway,
         project_proposal_gateway: ProjectProposalGateway,
+        project_proposal_request_gateway: ProjectProposalRequestGateway,
         freelancer_profile_gateway: UserFreelancerProfileGateway,
         proposal_generator: ProjectProposalGenerator,
         transaction_manager: TransactionManager,
@@ -262,6 +264,9 @@ class ProjectProposalGenerationService:
         self.user_role_gateway = user_role_gateway
         self.project_gateway = project_gateway
         self.project_proposal_gateway = project_proposal_gateway
+        self.project_proposal_request_gateway = (
+            project_proposal_request_gateway
+        )
         self.freelancer_profile_gateway = freelancer_profile_gateway
         self.proposal_generator = proposal_generator
         self.transaction_manager = transaction_manager
@@ -274,7 +279,7 @@ class ProjectProposalGenerationService:
         self,
         user_id: UUID,
         project_id: UUID,
-    ) -> ProjectProposal:
+    ) -> ProjectProposal | None:
         user_role = await self.user_role_gateway.get_role_by_user_id(user_id)
         if user_role != Role.ADMIN:
             logger.warning(
@@ -301,6 +306,14 @@ class ProjectProposalGenerationService:
                 project_id=project_id,
             )
             return project_proposal
+        mark_result = await self.project_proposal_request_gateway.mark_as_processing_if_pending(
+            user_id=user_id,
+            project_id=project_id,
+        )
+        await self.transaction_manager.commit()
+        logger.info(f"MARK RESULT: {mark_result}")
+        if not mark_result:
+            return None
         try:
             project_info = self._build_project_info(project)
             result = await self.proposal_generator.generate(
@@ -308,10 +321,17 @@ class ProjectProposalGenerationService:
                 project_info=project_info,
             )
             logger.debug(f"RESULT GENERATION: {result}")
-        except ProjectProposalGenerationError:
+        except ProjectProposalGenerationError as exc:
             logger.info(f"Project info: {project_info}")
             logger.info(f"Freelancer info: {freelancer_profile.about}")
             logger.info("Project proposal generation error")
+            error_text = str(exc) or traceback.format_exc()
+            await self.project_proposal_request_gateway.mark_as_failed(
+                user_id=user_id,
+                project_id=project_id,
+                error_text=error_text,
+            )
+            await self.transaction_manager.commit()
             raise
         project_proposal = ProjectProposal(
             project_id=project_id,
@@ -325,6 +345,10 @@ class ProjectProposalGenerationService:
             created_at=datetime.now(UTC),
         )
         await self.project_proposal_gateway.add(project_proposal)
+        await self.project_proposal_request_gateway.mark_as_generated(
+            user_id=user_id,
+            project_id=project_id,
+        )
         await self.transaction_manager.commit()
         # TODO: Что если упадет enqueue или сам таск, продумать
         await self.notify_queue.enqueue(user_id=user_id, project_id=project_id)
