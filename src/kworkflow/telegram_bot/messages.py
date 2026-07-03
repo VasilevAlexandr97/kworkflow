@@ -161,8 +161,16 @@ def select_categories_message() -> str:
     return "📂 Выберите категории для мониторинга"
 
 
+def generating_proposal_message() -> str:
+    return "🔄 Генерирую"
+
+
+def already_generating_proposal_message() -> str:
+    return "⏳ Уже генерирую"
+
+
 def project_proposal_generation_permission_error_message() -> str:
     return (
-        "Упс, пока что генерация доступна не всем пользователям\n\n"
+        "🔒 Упс, пока что генерация доступна не всем пользователям\n\n"
         "Связаться: @askanonagent"
     )

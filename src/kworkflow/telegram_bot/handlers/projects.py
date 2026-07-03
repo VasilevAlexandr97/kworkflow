@@ -17,6 +17,8 @@ from kworkflow.telegram_bot.keyboards import (
 from kworkflow.telegram_bot.messages import (
     profile_not_set_message,
     project_proposal_generation_permission_error_message,
+    generating_proposal_message,
+    already_generating_proposal_message,
 )
 
 router = Router()
@@ -36,13 +38,15 @@ async def generate_proposal_request(
     try:
         result = await service.request_generation(callback_data.project_id)
         if result.status == ProjectProposalGenerationRequestStatus.CREATED:
-            await call.answer("Генерирую", show_alert=True)
+            text = generating_proposal_message()
+            await call.answer(text, show_alert=True)
 
         elif (
             result.status
             == ProjectProposalGenerationRequestStatus.ALREADY_PENDING
         ):
-            await call.answer("Уже генерирую", show_alert=True)
+            text = already_generating_proposal_message()
+            await call.answer(text, show_alert=True)
 
         elif (
             result.status
