@@ -48,6 +48,7 @@ from kworkflow.projects.gateway import (
     ProjectCategoryGateway,
     ProjectGateway,
     ProjectProposalGateway,
+    ProjectProposalRequestGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import ProposalGenerationQueue
@@ -159,6 +160,10 @@ class ProjectProvider(Provider):
     )
     project_proposal_gateway = provide(
         ProjectProposalGateway,
+        scope=Scope.REQUEST,
+    )
+    project_proposal_request_gateway = provide(
+        ProjectProposalRequestGateway,
         scope=Scope.REQUEST,
     )
     project_proposal_generator = provide(

@@ -3,9 +3,14 @@ from uuid import UUID
 from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
-from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
+from kworkflow.projects.models import (
+    Project,
+    ProjectCategory,
+    ProjectProposal,
+    ProjectProposalRequest,
+)
 
 
 class ProjectCategoryGateway:
@@ -111,6 +116,38 @@ class ProjectGateway:
     async def get_by_id(self, project_id: UUID) -> Project | None:
         stmt = select(Project).where(Project.id == project_id)
         return await self.session.scalar(stmt)
+
+
+class ProjectProposalRequestGateway:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create_if_not_exists(
+        self,
+        request: ProjectProposalRequest,
+    ) -> bool:
+        stmt = (
+            pg_insert(ProjectProposalRequest)
+            .values(
+                user_id=request.user_id,
+                project_id=request.project_id,
+                status=request.status,
+                error=request.error,
+                created_at=request.created_at,
+                updated_at=request.updated_at,
+            )
+            .on_conflict_do_nothing(
+                index_elements=[
+                    ProjectProposalRequest.user_id,
+                    ProjectProposalRequest.project_id,
+                ],
+            )
+            .returning(
+                ProjectProposalRequest.user_id,
+            )
+        )
+        result = await self.session.scalar(stmt)
+        return result is not None
 
 
 class ProjectProposalGateway:

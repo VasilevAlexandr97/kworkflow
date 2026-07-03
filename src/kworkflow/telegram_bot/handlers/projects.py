@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
+from kworkflow.projects.dto import ProjectProposalGenerationRequestStatus
 from kworkflow.projects.exceptions import (
     ProjectProposalGenerationPermissionError,
 )
@@ -36,8 +37,23 @@ async def generate_proposal_request(
     state: FSMContext,
 ):
     try:
-        await service.request_generation(callback_data.project_id)
-        await call.answer("Генерирую", show_alert=True)
+        result = await service.request_generation(callback_data.project_id)
+        if result.status == ProjectProposalGenerationRequestStatus.CREATED:
+            await call.answer("Генерирую", show_alert=True)
+
+        elif (
+            result.status
+            == ProjectProposalGenerationRequestStatus.ALREADY_PENDING
+        ):
+            await call.answer("Уже генерирую", show_alert=True)
+
+        elif (
+            result.status
+            == ProjectProposalGenerationRequestStatus.ALREADY_GENERATED
+            and result.generated_text
+        ):
+            await call.message.answer(result.generated_text)
+            await call.answer()
     except UserFreelancerProfileNotFoundError:
         text = (
             f"{GENERATE_PROPOSAL_PROFILE_REQUIRED_TEXT}"
@@ -46,6 +62,7 @@ async def generate_proposal_request(
         )
         await state.set_state(FreelancerProfileState.edit)
         await call.message.answer(text)
+        await call.answer()
     except ProjectProposalGenerationPermissionError:
         text = project_proposal_generation_permission_error_message()
         await call.message.answer(text)

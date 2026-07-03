@@ -13,6 +13,10 @@ from kworkflow.notifications.interfaces import (
 )
 from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
 from kworkflow.preferences.gateways import UserFreelancerProfileGateway
+from kworkflow.projects.dto import (
+    ProjectProposalGenerationRequestResult,
+    ProjectProposalGenerationRequestStatus,
+)
 from kworkflow.projects.exceptions import (
     ProjectNotFoundError,
     ProjectProposalGenerationError,
@@ -22,12 +26,19 @@ from kworkflow.projects.gateway import (
     ProjectCategoryGateway,
     ProjectGateway,
     ProjectProposalGateway,
+    ProjectProposalRequestGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import (
     ProposalGenerationQueue,
 )
-from kworkflow.projects.models import Project, ProjectCategory, ProjectProposal
+from kworkflow.projects.models import (
+    Project,
+    ProjectCategory,
+    ProjectProposal,
+    ProjectProposalRequest,
+    ProjectProposalRequestStatus,
+)
 from kworkflow.users.gateways import UserRoleGateway
 from kworkflow.users.models import Role
 
@@ -158,16 +169,32 @@ class ProjectProposalRequestService:
     def __init__(
         self,
         project_gateway: ProjectGateway,
+        project_proposal_gateway: ProjectProposalGateway,
         freelancer_profile_gateway: UserFreelancerProfileGateway,
+        project_proposal_request_gateway: ProjectProposalRequestGateway,
         proposal_generation_queue: ProposalGenerationQueue,
         id_provider: IdProvider,
+        transaction_manager: TransactionManager,
     ):
         self.project_gateway = project_gateway
+        self.project_proposal_gateway = project_proposal_gateway
         self.freelancer_profile_gateway = freelancer_profile_gateway
+        self.project_proposal_request_gateway = (
+            project_proposal_request_gateway
+        )
         self.proposal_generation_queue = proposal_generation_queue
         self.id_provider = id_provider
+        self.transaction_manager = transaction_manager
 
-    async def request_generation(self, project_id: UUID):
+    async def request_generation(
+        self,
+        project_id: UUID,
+    ) -> ProjectProposalGenerationRequestResult:
+        """
+            Идемпотентно регистрирует запрос на генерацию:
+            если отклик уже готов, возвращает его сразу;
+            если генерация уже запрошена, не ставит повторную задачу.
+        """
         user_id = await self.id_provider.get_current_user_id()
         user_role = await self.id_provider.get_role()
         if user_role != Role.ADMIN:
@@ -182,9 +209,42 @@ class ProjectProposalRequestService:
         freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
         if freelancer_profile is None:
             raise UserFreelancerProfileNotFoundError
-        await self.proposal_generation_queue.enqueue(
+        proposal = await self.project_proposal_gateway.get(
             user_id=user_id,
             project_id=project_id,
+        )
+        if proposal:
+            return ProjectProposalGenerationRequestResult(
+                status=ProjectProposalGenerationRequestStatus.ALREADY_GENERATED,
+                generated_text=proposal.generated_text,
+            )
+        now = datetime.now(UTC)
+        new_request = ProjectProposalRequest(
+            user_id=user_id,
+            project_id=project_id,
+            status=ProjectProposalRequestStatus.PENDING,
+            error=None,
+            created_at=now,
+            updated_at=now,
+        )
+        created = (
+            await self.project_proposal_request_gateway.create_if_not_exists(
+                new_request,
+            )
+        )
+        await self.transaction_manager.commit()
+        if created:
+            await self.proposal_generation_queue.enqueue(
+                user_id=user_id,
+                project_id=project_id,
+            )
+            return ProjectProposalGenerationRequestResult(
+                status=ProjectProposalGenerationRequestStatus.CREATED,
+                generated_text=None,
+            )
+        return ProjectProposalGenerationRequestResult(
+            status=ProjectProposalGenerationRequestStatus.ALREADY_PENDING,
+            generated_text=None,
         )
 
 

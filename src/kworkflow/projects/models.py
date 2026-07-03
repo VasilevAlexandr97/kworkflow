@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
@@ -7,12 +8,20 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Numeric,
+    String,
     func,
     text as sa_text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kworkflow.infra.database.base import Base
+
+
+class ProjectProposalRequestStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    GENERATED = "generated"
+    FAILED = "failed"
 
 
 class ProjectCategory(Base):
@@ -63,16 +72,45 @@ class Project(Base):
         return f"Project(id={self.id}, title={self.title})"
 
 
-class ProjectProposal(Base):
-    __tablename__ = "project_proposals"
+class ProjectProposalRequest(Base):
+    __tablename__ = "project_proposal_requests"
 
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        primary_key=True,
+    )
     project_id: Mapped[UUID] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         primary_key=True,
     )
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default=ProjectProposalRequestStatus.PENDING,
+    )
+    error: Mapped[str | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+
+
+class ProjectProposal(Base):
+    __tablename__ = "project_proposals"
+
     user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        primary_key=True,
+    )
+    project_id: Mapped[UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         primary_key=True,
     )
@@ -104,4 +142,6 @@ class ProjectProposal(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="proposals", lazy="raise")
+    user: Mapped["User"] = relationship(
+        back_populates="proposals", lazy="raise"
+    )
