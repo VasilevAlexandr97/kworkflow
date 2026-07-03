@@ -82,6 +82,10 @@ class UserFreelancerProfileService:
         self.id_provider = id_provider
         self.transaction_manager = transaction_manager
 
+    async def get_profile(self) -> UserFreelancerProfile | None:
+        user_id = await self.id_provider.get_current_user_id()
+        return await self.profile_gateway.get(user_id)
+
     async def edit_or_create_profile(
         self,
         about_text: str,

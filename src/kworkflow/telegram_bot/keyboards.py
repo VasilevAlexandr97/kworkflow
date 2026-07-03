@@ -52,6 +52,12 @@ def build_main_menu_kbd():
     )
     builder.row(
         InlineKeyboardButton(
+            text="👤 Профиль",
+            callback_data="profile",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
             text="🛑 Стоп слова",
             callback_data="stop_words_menu",
         ),
@@ -128,6 +134,34 @@ def build_follow_subcategories_kbd(
         InlineKeyboardButton(
             text="💾 Подтвердить",
             callback_data=CategoryCB(action=CatAction.CONFIRM).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_profile_menu_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✏️ Редактировать",
+            callback_data="edit_profile",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_edit_profile_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✖️ Отмена",
+            callback_data="cancel_edit_profile",
         ),
     )
     return builder.as_markup()
