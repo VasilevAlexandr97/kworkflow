@@ -272,6 +272,38 @@ class ProjectProposalGenerationService:
         self.transaction_manager = transaction_manager
         self.notify_queue = notify_queue
 
+    async def _try_acquire_request(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+    ) -> bool:
+        mark_result = await self.project_proposal_request_gateway.mark_as_processing_if_pending(
+            user_id=user_id,
+            project_id=project_id,
+        )
+        await self.transaction_manager.commit()
+        return mark_result
+
+    async def _complete_request(self, user_id: UUID, project_id: UUID):
+        await self.project_proposal_request_gateway.mark_as_generated(
+            user_id=user_id,
+            project_id=project_id,
+        )
+        await self.transaction_manager.commit()
+
+    async def _fail_request(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+        error_text: str,
+    ):
+        await self.project_proposal_request_gateway.mark_as_failed(
+            user_id=user_id,
+            project_id=project_id,
+            error_text=error_text,
+        )
+        await self.transaction_manager.commit()
+
     def _build_project_info(self, project: Project) -> str:
         return f"Название: {project.title}\n\nЗадание: {project.description}"
 
@@ -280,76 +312,93 @@ class ProjectProposalGenerationService:
         user_id: UUID,
         project_id: UUID,
     ) -> ProjectProposal | None:
-        user_role = await self.user_role_gateway.get_role_by_user_id(user_id)
-        if user_role != Role.ADMIN:
-            logger.warning(
-                f"User {user_id} (role={user_role}) attempted to generate proposal "
-                f"for project {project_id} — access denied",
-            )
-            raise ProjectProposalGenerationPermissionError
-        logger.debug(f"USER_ID: {user_id}, USER_ROLE: {user_role}")
-        freelancer_profile = await self.freelancer_profile_gateway.get(user_id)
-        if freelancer_profile is None:
-            raise UserFreelancerProfileNotFoundError
-
-        project = await self.project_gateway.get_by_id(project_id)
-        if project is None:
-            raise ProjectNotFoundError
-
-        project_proposal = await self.project_proposal_gateway.get(
+        if not await self._try_acquire_request(
             user_id=user_id,
             project_id=project_id,
-        )
-        if project_proposal:
-            await self.notify_queue.enqueue(
+        ):
+            return None
+
+        try:
+            user_role = await self.user_role_gateway.get_role_by_user_id(
+                user_id,
+            )
+            if user_role != Role.ADMIN:
+                logger.warning(
+                    f"User {user_id} (role={user_role}) attempted to generate proposal "
+                    f"for project {project_id} — access denied",
+                )
+                raise ProjectProposalGenerationPermissionError
+            logger.debug(f"USER_ID: {user_id}, USER_ROLE: {user_role}")
+            freelancer_profile = await self.freelancer_profile_gateway.get(
+                user_id,
+            )
+            if freelancer_profile is None:
+                raise UserFreelancerProfileNotFoundError
+
+            project = await self.project_gateway.get_by_id(project_id)
+            if project is None:
+                raise ProjectNotFoundError
+
+            project_proposal = await self.project_proposal_gateway.get(
                 user_id=user_id,
                 project_id=project_id,
             )
-            return project_proposal
-        mark_result = await self.project_proposal_request_gateway.mark_as_processing_if_pending(
-            user_id=user_id,
-            project_id=project_id,
-        )
-        await self.transaction_manager.commit()
-        logger.info(f"MARK RESULT: {mark_result}")
-        if not mark_result:
-            return None
-        try:
+            if project_proposal:
+                await self.notify_queue.enqueue(
+                    user_id=user_id,
+                    project_id=project_id,
+                )
+                await self._complete_request(
+                    user_id=user_id,
+                    project_id=project_id,
+                )
+                return project_proposal
             project_info = self._build_project_info(project)
             result = await self.proposal_generator.generate(
                 freelancer_info=freelancer_profile.about,
                 project_info=project_info,
             )
             logger.debug(f"RESULT GENERATION: {result}")
+            project_proposal = ProjectProposal(
+                project_id=project_id,
+                user_id=user_id,
+                generated_text=result.text,
+                prompt=result.prompt,
+                prompt_tokens=result.prompt_tokens,
+                completion_tokens=result.completion_tokens,
+                total_tokens=result.total_tokens,
+                cost=result.cost,
+                created_at=datetime.now(UTC),
+            )
+            await self.project_proposal_gateway.add(project_proposal)
+            await self.transaction_manager.commit()
+            # TODO: Что если упадет enqueue или сам таск, продумать
+            await self.notify_queue.enqueue(
+                user_id=user_id,
+                project_id=project_id,
+            )
+            await self._complete_request(
+                user_id=user_id,
+                project_id=project_id,
+            )
         except ProjectProposalGenerationError as exc:
             logger.info(f"Project info: {project_info}")
             logger.info(f"Freelancer info: {freelancer_profile.about}")
             logger.info("Project proposal generation error")
             error_text = str(exc) or traceback.format_exc()
-            await self.project_proposal_request_gateway.mark_as_failed(
+            await self._fail_request(
                 user_id=user_id,
                 project_id=project_id,
                 error_text=error_text,
             )
-            await self.transaction_manager.commit()
             raise
-        project_proposal = ProjectProposal(
-            project_id=project_id,
-            user_id=user_id,
-            generated_text=result.text,
-            prompt=result.prompt,
-            prompt_tokens=result.prompt_tokens,
-            completion_tokens=result.completion_tokens,
-            total_tokens=result.total_tokens,
-            cost=result.cost,
-            created_at=datetime.now(UTC),
-        )
-        await self.project_proposal_gateway.add(project_proposal)
-        await self.project_proposal_request_gateway.mark_as_generated(
-            user_id=user_id,
-            project_id=project_id,
-        )
-        await self.transaction_manager.commit()
-        # TODO: Что если упадет enqueue или сам таск, продумать
-        await self.notify_queue.enqueue(user_id=user_id, project_id=project_id)
-        return project_proposal
+        except Exception:
+            error_text = traceback.format_exc()
+            await self._fail_request(
+                user_id=user_id,
+                project_id=project_id,
+                error_text=error_text,
+            )
+            raise
+        else:
+            return project_proposal
