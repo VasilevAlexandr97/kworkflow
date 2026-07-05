@@ -1,3 +1,4 @@
+from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
@@ -9,6 +10,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from kworkflow.projects.models import ProjectCategory
+from kworkflow.subscriptions.models import PlanSlug
 
 
 class CatAction(StrEnum):
@@ -60,6 +62,12 @@ def build_main_menu_kbd():
         InlineKeyboardButton(
             text="🛑 Стоп слова",
             callback_data="stop_words_menu",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="👑 PRO подписка",
+            callback_data="pro_subscription",
         ),
     )
     return builder.as_markup()
@@ -222,6 +230,55 @@ def build_project_kbd(project_id: UUID):
         InlineKeyboardButton(
             text="🏚 Меню",
             callback_data=MainMenuCB(delete_message=False).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_subscription_plan_kbd(slug: str, price: Decimal):
+    builder = InlineKeyboardBuilder()
+    if slug == PlanSlug.PRO_INITIAL:
+        text = f"👑 Попробовать PRO за {price:.0f}₽"
+    else:
+        text = f"👑 PRO за {price:.0f}₽/мес"
+    builder.row(
+        InlineKeyboardButton(
+            text=text,
+            callback_data="create_payment",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=False).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_payment_kbd(link: str):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="Оплатить",
+            url=link,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=False).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_payment_email_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
         ),
     )
     return builder.as_markup()

@@ -42,25 +42,32 @@ class TelegramBotConfig:
 
 
 @dataclass(frozen=True)
-class PolzaConfig:
-    api_key: str
-    base_url: str
-
-
-@dataclass(frozen=True)
 class KworkConfig:
     login: str
     password: str
 
 
 @dataclass(frozen=True)
+class PolzaConfig:
+    api_key: str
+    base_url: str
+
+
+@dataclass(frozen=True)
+class YookassaConfig:
+    shop_id: str
+    secret_key: str
+
+
+@dataclass(frozen=True)
 class Config:
     postgres: PostgresConfig
     redis: RedisConfig
+    telegram_bot: TelegramBotConfig
     kwork: KworkConfig
     polza: PolzaConfig
+    yookassa: YookassaConfig
     # project_dir: Path = PROJECT_DIR
-    telegram_bot: TelegramBotConfig
     debug: bool = field(default=False)
 
 
@@ -89,17 +96,21 @@ def get_config() -> Config:
             port=get_required_env("REDIS_PORT"),
             password=get_required_env("REDIS_PASSWORD"),
         ),
+        telegram_bot=TelegramBotConfig(
+            token=get_required_env("TELEGRAM_BOT_TOKEN"),
+        ),
         kwork=KworkConfig(
             login=get_required_env("KWORK_USERNAME"),
             password=get_required_env("KWORK_PASSWORD"),
-        ),
-        telegram_bot=TelegramBotConfig(
-            token=get_required_env("TELEGRAM_BOT_TOKEN"),
         ),
         debug=get_optional_env("DEBUG") in ("True", "true", "1"),
         polza=PolzaConfig(
             api_key=get_required_env("POLZA_API_KEY"),
             base_url=get_required_env("POLZA_BASE_URL"),
+        ),
+        yookassa=YookassaConfig(
+            shop_id=get_required_env("YOOKASSA_SHOP_ID"),
+            secret_key=get_required_env("YOOKASSA_SECRET_KEY"),
         ),
     )
 

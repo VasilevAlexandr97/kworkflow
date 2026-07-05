@@ -13,6 +13,7 @@ from kworkflow.main.di import (
     NotificationProvider,
     PreferenceProvider,
     ProjectProvider,
+    SubscriptionProvider,
     TelegramBotProvider,
     UserProvider,
 )
@@ -21,6 +22,9 @@ from kworkflow.telegram_bot.handlers.preferences import (
     router as preferences_router,
 )
 from kworkflow.telegram_bot.handlers.projects import router as projects_router
+from kworkflow.telegram_bot.handlers.subscriptions import (
+    router as subscriptions_router,
+)
 
 bot = Bot(
     token=config.telegram_bot.token,
@@ -35,6 +39,7 @@ container = make_async_container(
     ProjectProvider(),
     PreferenceProvider(),
     NotificationProvider(),
+    SubscriptionProvider(),
     AiogramProvider(),
     TelegramBotProvider(),
     context={Config: config, Bot: bot},
@@ -45,6 +50,7 @@ def setup_handlers(dp: Dispatcher):
     dp.include_router(default_router)
     dp.include_router(preferences_router)
     dp.include_router(projects_router)
+    dp.include_router(subscriptions_router)
 
 
 def get_dispatcher() -> Dispatcher:

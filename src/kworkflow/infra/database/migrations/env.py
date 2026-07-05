@@ -5,10 +5,11 @@ from sqlalchemy import engine_from_config, pool
 
 from kworkflow.main.config import get_config
 from kworkflow.infra.database.base import Base
-from kworkflow.projects.models import *  # noqa: F403
-from kworkflow.users.models import *  # noqa: F403
-from kworkflow.preferences.models import *  # noqa: F403
-from kworkflow.notifications.models import *  # noqa: F403
+from kworkflow.projects.models import *
+from kworkflow.users.models import *
+from kworkflow.preferences.models import *
+from kworkflow.notifications.models import *
+from kworkflow.subscriptions.models import *
 
 project_config = get_config()
 # this is the Alembic Config object, which provides

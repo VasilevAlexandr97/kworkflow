@@ -25,6 +25,7 @@ from kworkflow.infra.taskiq.queue import (
     TaskiqProposalGenerationQueue,
 )
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
+from kworkflow.infra.yookassa.client import YooKassaClient
 from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.interfaces import (
@@ -58,6 +59,12 @@ from kworkflow.projects.services import (
     ProjectProposalRequestService,
     ProjectSyncService,
 )
+from kworkflow.subscriptions.gateways import (
+    PaymentGateway,
+    SubscriptionGateway,
+    SubscriptionPlanGateway,
+)
+from kworkflow.subscriptions.services import SubscriptionService
 from kworkflow.users.gateways import UserGateway, UserRoleGateway
 
 
@@ -130,6 +137,18 @@ class InfraProvider(Provider):
         client = AsyncOpenAI(
             api_key=config.polza.api_key,
             base_url=config.polza.base_url,
+        )
+        yield client
+        await client.close()
+
+    @provide(scope=Scope.APP)
+    async def get_yookassa_client(
+        self,
+        config: Config,
+    ) -> AsyncIterable[YooKassaClient]:
+        client = YooKassaClient(
+            shop_id=config.yookassa.shop_id,
+            secret_key=config.yookassa.secret_key,
         )
         yield client
         await client.close()
@@ -230,6 +249,25 @@ class NotificationProvider(Provider):
         TaskiqProposalGeneratedNotificationQueue,
         scope=Scope.REQUEST,
         provides=ProposalGeneratedNotificationQueue,
+    )
+
+
+class SubscriptionProvider(Provider):
+    subscription_plan_gateway = provide(
+        SubscriptionPlanGateway,
+        scope=Scope.REQUEST,
+    )
+    subscription_gateway = provide(
+        SubscriptionGateway,
+        scope=Scope.REQUEST,
+    )
+    payment_gateway = provide(
+        PaymentGateway,
+        scope=Scope.REQUEST,
+    )
+    subscription_service = provide(
+        SubscriptionService,
+        scope=Scope.REQUEST,
     )
 
 

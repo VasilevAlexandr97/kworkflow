@@ -8,3 +8,7 @@ class FreelancerProfileState(StatesGroup):
 class StopWordsState(StatesGroup):
     add = State()
     delete = State()
+
+
+class PaymentState(StatesGroup):
+    set_email = State()

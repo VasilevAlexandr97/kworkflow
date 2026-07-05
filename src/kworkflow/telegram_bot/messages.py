@@ -1,5 +1,5 @@
-from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.projects.models import Project, ProjectCategory
+from kworkflow.subscriptions.models import PlanSlug
 
 
 def project_message(project: Project) -> str:
@@ -174,3 +174,46 @@ def project_proposal_generation_permission_error_message() -> str:
         "🔒 Упс, пока что генерация доступна не всем пользователям\n\n"
         "Связаться: @askanonagent"
     )
+
+
+def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
+    text = (
+        "👑 PRO подписка\n\n"
+        "Открой полный доступ к возможностям бота:\n\n"
+        "📂 Все категории — подписывайся не на 2, а на любое "
+        "количество категорий и не пропускай ни одного нового проекта\n\n"
+        "🔔 Мгновенные уведомления — узнавай о новых заказах "
+        "в выбранных категориях первым, пока их не разобрали конкуренты\n\n"
+        "🤖 100 генераций откликов — вместо 3 бесплатных получи 100 откликов, "
+        "сгенерированных нейросетью, которые помогут выделиться среди фрилансеров\n\n"
+        "⚡️ Экономия времени — не нужно придумывать текст отклика самому, "
+        "ИИ сделает это за секунды\n\n"
+    )
+    if plan_slug == PlanSlug.PRO_INITIAL:
+        text += (
+            "🎁 Попробуй PRO всего за 1₽ на 3 дня, "
+            "далее — 399₽/мес. Отменить можно в любой момент."
+        )
+    else:
+        text += (
+            "💎 Оформи полную PRO подписку и "
+            "получи безлимитный доступ ко всем функциям бота"
+        )
+    return text
+
+
+def payment_message(payment_id: str, email: str, link: str) -> str:
+    return (
+        f"🛒 Платеж: <b>{payment_id}</b>\n\n"
+        f"✅ Используется email: {email}\n\n"
+        f"💳 Перейди по ссылке для оплаты: {link}\n\n"
+        "Либо жми оплатить 👇"
+    )
+
+
+def payment_email_message() -> str:
+    return "✍️ Введи свой email (он нужен для чека):"
+
+
+def payment_email_validation_error_message() -> str:
+    return "❌ Такой email не подходит. Попробуй ещё раз:"
