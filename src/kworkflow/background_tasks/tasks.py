@@ -8,11 +8,13 @@ from kworkflow.infra.taskiq.broker import broker
 from kworkflow.notifications.services import (
     ProjectNotificationService,
     ProjectProposalNotificationService,
+    SubscriptionNotificationService,
 )
 from kworkflow.projects.services import (
-    ProjectSyncService,
     ProjectProposalGenerationService,
+    ProjectSyncService,
 )
+from kworkflow.subscriptions.services import PaymentVerificationService
 
 logger = logging.getLogger(__name__)
 
@@ -61,3 +63,20 @@ async def notify_project_proposal_generated_task(
     service: FromDishka[ProjectProposalNotificationService],
 ):
     await service.notify_generated(user_id=user_id, project_id=project_id)
+
+
+@broker.task(schedule=[{"cron": "* * * * *"}])
+@inject
+async def verify_pending_payments(
+    service: FromDishka[PaymentVerificationService],
+):
+    await service.verify_pending_payments()
+
+
+@broker.task()
+@inject
+async def notify_subscription_activated(
+    user_id: UUID,
+    service: FromDishka[SubscriptionNotificationService],
+):
+    await service.notify_activated(user_id)

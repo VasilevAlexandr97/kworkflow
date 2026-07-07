@@ -45,7 +45,8 @@ class ReceiptItemData(BaseModel):
 
 class ConfirmationRedirectData(BaseModel):
     type: str | ConfirmationType
-    return_url: str
+    return_url: str | None = None
+    confirmation_url: str | None = None
 
 
 class ReceiptData(BaseModel):
@@ -63,7 +64,7 @@ class PaymentRequest(BaseModel):
     metadata: dict | None = None
 
 
-class PaymentStatus(StrEnum):
+class Status(StrEnum):
     PENDING = "pending"
     SUCCEEDED = "succeeded"
     CANCELED = "canceled"
@@ -74,22 +75,32 @@ class RecipientData(BaseModel):
     gateway_id: str
 
 
-class ConfirmationRedirectResponseData(BaseModel):
-    type: str | ConfirmationType
-    confirmation_url: str
+class PaymentMethodData(BaseModel):
+    type: str
+    id: str
+    saved: bool
+    status: str
+
+
+class CancellationDetailsData(BaseModel):
+    party: str
+    reason: str
 
 
 class PaymentResponse(BaseModel):
     id: str
-    status: PaymentStatus
+    status: Status
     amount: AmountData
     description: str
     recipient: RecipientData
     created_at: datetime
-    confirmation: ConfirmationRedirectResponseData
     test: bool
     paid: bool
     refundable: bool
+    payment_method: PaymentMethodData | None = None
+    confirmation: ConfirmationRedirectData | None = None
+    cancellation_details: CancellationDetailsData | None = None
+    metadata: dict | None = None
 
 
 class YooKassaClient:
@@ -151,10 +162,16 @@ class YooKassaClient:
         response.raise_for_status()
         return response.json()
 
-    async def get_payment(self, payment_id: str) -> dict:
-        response = await self._client.get(f"/payments/{payment_id}")
-        response.raise_for_status()
-        return response.json()
+    async def get_payment(self, payment_id: str) -> PaymentResponse:
+        resp = await self._client.get(f"/payments/{payment_id}")
+        try:
+            resp.raise_for_status()
+            json_data = resp.json()
+            logger.info(f"JSON DATA: {json_data}")
+            return PaymentResponse(**json_data)
+        except httpx.HTTPStatusError:
+            logger.debug(f"RESPONSE TEXT: {resp.text}")
+            raise
 
     async def close(self):
         await self._client.aclose()

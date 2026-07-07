@@ -282,3 +282,14 @@ def build_payment_email_kbd():
         ),
     )
     return builder.as_markup()
+
+
+def build_subscription_activated_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()

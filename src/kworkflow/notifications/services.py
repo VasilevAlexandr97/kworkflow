@@ -1,6 +1,3 @@
-from kworkflow.projects.exceptions import ProjectProposalNotFoundError
-from kworkflow.users.exceptions import UserNotFoundError
-from kworkflow.users.gateways import UserGateway
 import asyncio
 import logging
 
@@ -18,9 +15,15 @@ from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
+from kworkflow.projects.exceptions import ProjectProposalNotFoundError
 from kworkflow.projects.gateway import ProjectGateway, ProjectProposalGateway
-from kworkflow.telegram_bot.keyboards import build_project_kbd
+from kworkflow.telegram_bot.keyboards import (
+    build_project_kbd,
+    build_subscription_activated_kbd,
+)
 from kworkflow.telegram_bot.messages import project_message
+from kworkflow.users.exceptions import UserNotFoundError
+from kworkflow.users.gateways import UserGateway
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +115,9 @@ class ProjectProposalNotificationService:
         self.telegram_notifier = telegram_notifier
 
     async def notify_generated(self, user_id: UUID, project_id: UUID):
-        logger.info(f"NOTIFY PROJECT PROPOSAL: user_id={user_id}, project_id: {project_id}")
+        logger.info(
+            f"NOTIFY PROJECT PROPOSAL: user_id={user_id}, project_id: {project_id}"
+        )
         proposal = await self.proposal_gateway.get_with_user(
             user_id=user_id,
             project_id=project_id,
@@ -123,4 +128,24 @@ class ProjectProposalNotificationService:
         await self.telegram_notifier.send_message(
             chat_id=proposal.user.telegram_id,
             text=proposal.generated_text,
+        )
+
+
+class SubscriptionNotificationService:
+    def __init__(
+        self,
+        user_gateway: UserGateway,
+        telegram_notifier: TelegramNotifier,
+    ):
+        self.user_gateway = user_gateway
+        self.telegram_notifier = telegram_notifier
+
+    async def notify_activated(self, user_id: UUID):
+        user = await self.user_gateway.get_by_id(user_id)
+        if not user:
+            raise UserNotFoundError
+        await self.telegram_notifier.send_message(
+            chat_id=user.telegram_id,
+            text="👑 PRO подписка активирована!",
+            keyboard=build_subscription_activated_kbd(),
         )

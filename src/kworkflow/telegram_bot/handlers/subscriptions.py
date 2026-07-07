@@ -67,6 +67,7 @@ async def create_payment(
         text = payment_message(
             payment_id=payment.yookassa_payment_id,
             email=payment.email,
+            amount=payment.amount,
             link=payment.link,
         )
         keyboard = build_payment_kbd(payment.link)
@@ -92,6 +93,7 @@ async def set_payment_email(
         text = payment_message(
             payment_id=payment.yookassa_payment_id,
             email=payment.email,
+            amount=payment.amount,
             link=payment.link,
         )
         keyboard = build_payment_kbd(payment.link)

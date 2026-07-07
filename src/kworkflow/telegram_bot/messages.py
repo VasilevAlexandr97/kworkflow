@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.projects.models import Project, ProjectCategory
 from kworkflow.subscriptions.models import PlanSlug
 
@@ -192,7 +195,7 @@ def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
     if plan_slug == PlanSlug.PRO_INITIAL:
         text += (
             "🎁 Попробуй PRO всего за 1₽ на 3 дня, "
-            "далее — 399₽/мес. Отменить можно в любой момент."
+            "далее — 499₽/мес. Отменить можно в любой момент."
         )
     else:
         text += (
@@ -202,9 +205,12 @@ def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
     return text
 
 
-def payment_message(payment_id: str, email: str, link: str) -> str:
+def payment_message(
+    payment_id: str, email: str, amount: Decimal, link: str
+) -> str:
     return (
         f"🛒 Платеж: <b>{payment_id}</b>\n\n"
+        f"💰 Cумма: {amount:.0f}₽\n\n"
         f"✅ Используется email: {email}\n\n"
         f"💳 Перейди по ссылке для оплаты: {link}\n\n"
         "Либо жми оплатить 👇"

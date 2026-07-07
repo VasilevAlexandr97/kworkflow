@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
@@ -50,6 +50,10 @@ class Subscription(Base):
     plan_id: Mapped[UUID] = mapped_column(
         ForeignKey("subscription_plans.id", ondelete="RESTRICT"),
     )
+    payment_id: Mapped[UUID] = mapped_column(
+        ForeignKey("payments.id", ondelete="RESTRICT"),
+        unique=True,
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -76,6 +80,7 @@ class PaymentStatus(StrEnum):
     PENDING = "pending"
     SUCCEEDED = "succeeded"
     EXPIRED = "expired"
+    CANCELED = "canceled"
 
 
 class Payment(Base):
@@ -85,6 +90,9 @@ class Payment(Base):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     yookassa_payment_id: Mapped[str] = mapped_column(
         unique=True,
+    )
+    yookassa_payment_method_id: Mapped[str | None] = mapped_column(
+        nullable=True,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[str]
@@ -99,6 +107,22 @@ class Payment(Base):
         DateTime(timezone=True),
         nullable=False,
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+
+    def mark_succeeded(self, payment_method_id: str) -> None:
+        if not payment_method_id:
+            raise ValueError(
+                "payment_method_id is required — subscription payments "
+                "always have a saved payment method",
+            )
+        now = datetime.now(UTC)
+        self.yookassa_payment_method_id = payment_method_id
+        self.status = PaymentStatus.SUCCEEDED
+        self.paid_at = now
+        self.updated_at = now
 
     def __repr__(self) -> str:
         return (

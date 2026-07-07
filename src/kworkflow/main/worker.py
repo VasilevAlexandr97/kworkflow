@@ -14,6 +14,7 @@ from kworkflow.main.di import (
     NotificationProvider,
     PreferenceProvider,
     ProjectProvider,
+    SubscriptionProvider,
     UserProvider,
     WorkerProvider,
 )
@@ -30,6 +31,7 @@ container = make_async_container(
     ProjectProvider(),
     PreferenceProvider(),
     NotificationProvider(),
+    SubscriptionProvider(),
     WorkerProvider(),
     context={Config: config, Bot: bot},
 )

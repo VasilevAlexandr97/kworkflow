@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,16 +22,33 @@ class SubscriptionPlanGateway:
         )
         return await self.session.scalar(stmt)
 
+    async def get_by_id(self, plan_id: UUID) -> SubscriptionPlan | None:
+        stmt = select(SubscriptionPlan).where(
+            SubscriptionPlan.id == plan_id,
+        )
+        return await self.session.scalar(stmt)
+
 
 class SubscriptionGateway:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def add(self, subscription: Subscription):
+        self.session.add(subscription)
+        await self.session.flush()
 
     async def get(self, user_id: UUID) -> list[Subscription]:
         stmt = select(Subscription).where(
             Subscription.user_id == user_id,
         )
         return list(await self.session.scalars(stmt))
+
+    # async def get_active(self, user_id: UUID) -> Subscription | None:
+    #     stmt = select(Subscription).where(
+    #         Subscription.user_id == user_id,
+    #         Subscription.expires_at > datetime.now(UTC),
+    #     )
+    #     return await self.session.scalar(stmt)
 
 
 class PaymentGateway:
@@ -66,3 +84,11 @@ class PaymentGateway:
             .limit(1)
         )
         return await self.session.scalar(stmt)
+
+    async def get_recent_unpaid_payments(self) -> list[Payment]:
+        stmt = select(Payment).where(
+            Payment.status.in_([PaymentStatus.PENDING, PaymentStatus.EXPIRED]),
+            Payment.paid_at.is_(None),
+            Payment.created_at > datetime.now(UTC) - timedelta(hours=24),
+        )
+        return list(await self.session.scalars(stmt))

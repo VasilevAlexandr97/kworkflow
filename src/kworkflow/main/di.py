@@ -23,6 +23,7 @@ from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.infra.taskiq.queue import (
     TaskiqProposalGeneratedNotificationQueue,
     TaskiqProposalGenerationQueue,
+    TaskiqSubscriptionActivatedNotificationQueue,
 )
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.infra.yookassa.client import YooKassaClient
@@ -30,10 +31,12 @@ from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.interfaces import (
     ProposalGeneratedNotificationQueue,
+    SubscriptionActivatedNotificationQueue,
 )
 from kworkflow.notifications.services import (
     ProjectNotificationService,
     ProjectProposalNotificationService,
+    SubscriptionNotificationService,
 )
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
@@ -64,7 +67,10 @@ from kworkflow.subscriptions.gateways import (
     SubscriptionGateway,
     SubscriptionPlanGateway,
 )
-from kworkflow.subscriptions.services import SubscriptionService
+from kworkflow.subscriptions.services import (
+    PaymentVerificationService,
+    SubscriptionService,
+)
 from kworkflow.users.gateways import UserGateway, UserRoleGateway
 
 
@@ -245,10 +251,20 @@ class NotificationProvider(Provider):
         ProjectProposalNotificationService,
         scope=Scope.REQUEST,
     )
+    subscription_notification_service = provide(
+        SubscriptionNotificationService,
+        scope=Scope.REQUEST,
+    )
+    # TODO: подумать какой Scope нужен для Queue
     proposal_notification_queue = provide(
         TaskiqProposalGeneratedNotificationQueue,
         scope=Scope.REQUEST,
         provides=ProposalGeneratedNotificationQueue,
+    )
+    subscription_activated_notification_queue = provide(
+        TaskiqSubscriptionActivatedNotificationQueue,
+        scope=Scope.REQUEST,
+        provides=SubscriptionActivatedNotificationQueue,
     )
 
 
@@ -267,6 +283,10 @@ class SubscriptionProvider(Provider):
     )
     subscription_service = provide(
         SubscriptionService,
+        scope=Scope.REQUEST,
+    )
+    payment_verification_service = provide(
+        PaymentVerificationService,
         scope=Scope.REQUEST,
     )
 
