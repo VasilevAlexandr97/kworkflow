@@ -246,7 +246,7 @@ class PaymentVerificationService:
                                 "plan_id",
                             )
                             if not plan_id:
-                                logger.info(
+                                logger.error(
                                     f"SUCCEEDED payment {payment.id} "
                                     f"(yookassa_id={payment.yookassa_payment_id}) "
                                     f" has metadata without 'plan_id' "
@@ -258,9 +258,11 @@ class PaymentVerificationService:
                                     UUID(plan_id),
                                 )
                             )
-                            if plan is None:
-                                logger.info(
-                                    f"Subscription plan with id={plan_id} not found",
+                            if not plan:
+                                logger.error(
+                                    f"Subscription plan id={plan_id} "
+                                    f"(from payment {payment.id} metadata) "
+                                    "not found in DB — skipping",
                                 )
                                 continue
                             payment.mark_succeeded(pm.id)
