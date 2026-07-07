@@ -44,6 +44,7 @@ from kworkflow.telegram_bot.states import (
     FreelancerProfileState,
     StopWordsState,
 )
+from kworkflow.users.dto import CurrentUser
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -162,6 +163,7 @@ async def follow_category(
 async def save_category_follow(
     call: types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
+    current_user: FromDishka[CurrentUser],
     state: FSMContext,
 ):
     state_data = await state.get_data()
@@ -170,7 +172,7 @@ async def save_category_follow(
     ]
     categories = await service.sync_user_follows(follow_category_ids)
     text = categories_saved_message(categories)
-    keyboard = build_main_menu_kbd()
+    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
     await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
 
@@ -182,11 +184,12 @@ async def save_category_follow(
 async def unfollow_all_categories(
     call: types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
+    current_user: FromDishka[CurrentUser],
     state: FSMContext,
 ):
     await service.unfollow_all_categories()
     text = unfollow_all_categories_message()
-    keyboard = build_main_menu_kbd()
+    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
     await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
 

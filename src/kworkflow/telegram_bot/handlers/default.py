@@ -1,17 +1,18 @@
-from aiogram.fsm.context import FSMContext
 from aiogram import F, Router, types
 from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.auth.telegram_auth import TelegramAuth
 from kworkflow.preferences.services import UserCategoryFollowService
 from kworkflow.telegram_bot.keyboards import (
+    MainMenuCB,
     build_main_menu_kbd,
     build_start_kbd,
-    MainMenuCB,
 )
 from kworkflow.telegram_bot.messages import menu_message, start_message
+from kworkflow.users.dto import CurrentUser
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -26,6 +27,7 @@ async def start_handler(
     message: types.Message,
     auth: FromDishka[TelegramAuth],
     service: FromDishka[UserCategoryFollowService],
+    current_user: FromDishka[CurrentUser],
     state: FSMContext,
 ):
     if message.from_user is None:
@@ -37,7 +39,7 @@ async def start_handler(
     else:
         categories = await service.get_followed_categories()
         text = menu_message(categories)
-        keyboard = build_main_menu_kbd()
+        keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
     await message.answer(
         text,
         reply_markup=keyboard,
@@ -50,11 +52,12 @@ async def start_handler(
 async def main_menu_command_handler(
     message: types.Message,
     service: FromDishka[UserCategoryFollowService],
+    current_user: FromDishka[CurrentUser],
     state: FSMContext,
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
-    keyboard = build_main_menu_kbd()
+    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
     await message.answer(text, reply_markup=keyboard)
     await state.clear()
 
@@ -64,12 +67,13 @@ async def main_menu_command_handler(
 async def main_menu_cb_handler(
     call: types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
+    current_user: FromDishka[CurrentUser],
     state: FSMContext,
     callback_data: MainMenuCB,
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
-    keyboard = build_main_menu_kbd()
+    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
     if callback_data.delete_message:
         await call.message.delete()
     await call.message.answer(text, reply_markup=keyboard)

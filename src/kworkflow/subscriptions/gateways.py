@@ -43,12 +43,18 @@ class SubscriptionGateway:
         )
         return list(await self.session.scalars(stmt))
 
-    # async def get_active(self, user_id: UUID) -> Subscription | None:
-    #     stmt = select(Subscription).where(
-    #         Subscription.user_id == user_id,
-    #         Subscription.expires_at > datetime.now(UTC),
-    #     )
-    #     return await self.session.scalar(stmt)
+    async def has_active(self, user_id: UUID) -> bool:
+        stmt = (
+            select(Subscription.id)
+            .where(
+                Subscription.user_id == user_id,
+                Subscription.started_at.is_not(None),
+                Subscription.expires_at > datetime.now(UTC),
+            )
+            .exists()
+        )
+        result = await self.session.execute(select(stmt))
+        return result.scalar() or False
 
 
 class PaymentGateway:

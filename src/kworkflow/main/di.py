@@ -1,3 +1,5 @@
+from kworkflow.users.dto import CurrentUser
+from kworkflow.users.services import UserService
 from collections.abc import AsyncIterable
 
 from aiogram import Bot
@@ -162,8 +164,12 @@ class InfraProvider(Provider):
 
 class UserProvider(Provider):
     user_gateway = provide(UserGateway, scope=Scope.REQUEST)
-    # user_service = provide(UserService, scope=Scope.REQUEST)
     user_role_gateway = provide(UserRoleGateway, scope=Scope.REQUEST)
+    user_service = provide(UserService, scope=Scope.REQUEST)
+
+    @provide(scope=Scope.REQUEST)
+    async def get_current_user(self, user_service: UserService) -> CurrentUser:
+        return await user_service.get_current_user()
 
 
 class ProjectProvider(Provider):
