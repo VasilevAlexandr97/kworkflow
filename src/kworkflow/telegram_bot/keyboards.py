@@ -250,7 +250,7 @@ def build_subscription_plan_kbd(slug: str, price: Decimal):
     builder.row(
         InlineKeyboardButton(
             text="🏚 Меню",
-            callback_data=MainMenuCB(delete_message=False).pack(),
+            callback_data=MainMenuCB(delete_message=True).pack(),
         ),
     )
     return builder.as_markup()
@@ -267,7 +267,7 @@ def build_payment_kbd(link: str):
     builder.row(
         InlineKeyboardButton(
             text="🏚 Меню",
-            callback_data=MainMenuCB(delete_message=False).pack(),
+            callback_data=MainMenuCB(delete_message=True).pack(),
         ),
     )
     return builder.as_markup()
