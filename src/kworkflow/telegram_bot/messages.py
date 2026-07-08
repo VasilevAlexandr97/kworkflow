@@ -1,7 +1,9 @@
+from datetime import datetime
 from decimal import Decimal
 
 from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.projects.models import Project, ProjectCategory
+from kworkflow.subscriptions.dto import SubscriptionInfo
 from kworkflow.subscriptions.models import PlanSlug
 
 
@@ -223,3 +225,50 @@ def payment_email_message() -> str:
 
 def payment_email_validation_error_message() -> str:
     return "❌ Такой email не подходит. Попробуй ещё раз:"
+
+
+def subscription_exists_message():
+    return "👑 У вас уже оформлена PRO подписка."
+
+def not_active_subscription_message() -> str:
+    return (
+        "👑 Управление подпиской\n\n"
+        "У вас нет активной PRO подписки.\n\n"
+        "Возможно, срок действия истёк.\n"
+        "Оформите подписку, чтобы продолжить пользоваться:\n\n"
+        "• 📂 Любое количество категорий\n"
+        "• 🔔 Мгновенные уведомления\n"
+        "• 🤖 100 генераций откликов\n"
+        "• ⚡️ Экономия времени"
+    )
+
+
+def subscription_info_message(info: SubscriptionInfo):
+    status = "✅ Активна"
+    if info.is_cancelled:
+        status = "⏳ Отменена"
+    expires_at = info.expires_at.strftime("%d.%m.%Y")
+    text = (
+        "👑 Управление подпиской\n\n"
+        f"Тариф: {info.plan_name}\n"
+        f"Статус: {status}\n"
+        f"Оплачен до: {expires_at}\n"
+        f"Осталось дней: {info.days_left}\n\n"
+    )
+
+    if info.is_cancelled:
+        text += "Подписка отменена. PRO-доступ сохранится до конца периода."
+    return text
+
+
+def subscription_cancelled_message(expires_at: datetime) -> str:
+    return (
+        "✅ Подписка отменена.\n\n"
+        f"PRO-доступ сохранится до {expires_at.strftime('%d.%m.%Y')}.\n"
+        "Никаких списаний больше не будет.\n\n"
+        "Спасибо, что были с нами!"
+    )
+
+
+def subscription_already_cancelled_message() -> str:
+    return "❌ Подписка уже была отменена ранее."

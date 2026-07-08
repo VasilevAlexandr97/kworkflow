@@ -64,7 +64,14 @@ def build_main_menu_kbd(is_pro: bool = False):
             callback_data="stop_words_menu",
         ),
     )
-    if not is_pro:
+    if is_pro:
+        builder.row(
+            InlineKeyboardButton(
+                text="👑 Управление подпиской",
+                callback_data="manage_subscription",
+            ),
+        )
+    else:
         builder.row(
             InlineKeyboardButton(
                 text="👑 PRO подписка",
@@ -286,6 +293,69 @@ def build_payment_email_kbd():
 
 
 def build_subscription_activated_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_subscription_exists_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="👑 Управление подпиской",
+            callback_data="manage_subscription",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_no_active_subscription_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="👑 PRO подписка",
+            callback_data="pro_subscription",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_subscription_manage_kbd(is_cancelled: bool = False):
+    builder = InlineKeyboardBuilder()
+    if not is_cancelled:
+        builder.row(
+            InlineKeyboardButton(
+                text="❌ Отменить подписку",
+                callback_data="cancel_subscription",
+            ),
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_subscription_cancelled_kbd():
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(

@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from kworkflow.subscriptions.models import (
     Payment,
@@ -48,13 +49,32 @@ class SubscriptionGateway:
             select(Subscription.id)
             .where(
                 Subscription.user_id == user_id,
-                Subscription.started_at.is_not(None),
                 Subscription.expires_at > datetime.now(UTC),
             )
             .exists()
         )
         result = await self.session.execute(select(stmt))
         return result.scalar() or False
+
+    async def get_latest_active(
+        self,
+        user_id: UUID,
+        with_plan: bool = False,
+    ) -> Subscription | None:
+        stmt = select(Subscription)
+
+        if with_plan:
+            stmt = stmt.options(joinedload(Subscription.plan))
+
+        stmt = (
+            stmt.where(
+                Subscription.user_id == user_id,
+                Subscription.expires_at > datetime.now(UTC),
+            )
+            .order_by(Subscription.created_at.desc())
+            .limit(1)
+        )
+        return await self.session.scalar(stmt)
 
 
 class PaymentGateway:

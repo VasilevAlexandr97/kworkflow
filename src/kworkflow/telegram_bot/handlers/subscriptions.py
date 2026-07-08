@@ -11,19 +11,33 @@ from kworkflow.main.config import Config
 from kworkflow.subscriptions.exceptions import (
     PaymentEmailRequiredError,
     PaymentEmailValidationError,
+    SubscriptionAlreadyCancelledError,
+    ActiveSubscriptionExistsError,
 )
 from kworkflow.subscriptions.models import PlanSlug
-from kworkflow.subscriptions.services import SubscriptionService
+from kworkflow.subscriptions.services import (
+    SubscriptionManagementService,
+    SubscriptionPaymentService,
+)
 from kworkflow.telegram_bot.keyboards import (
+    build_no_active_subscription_kbd,
     build_payment_email_kbd,
     build_payment_kbd,
+    build_subscription_cancelled_kbd,
+    build_subscription_manage_kbd,
     build_subscription_plan_kbd,
+    build_subscription_exists_kbd,
 )
 from kworkflow.telegram_bot.messages import (
+    not_active_subscription_message,
     payment_email_message,
     payment_email_validation_error_message,
     payment_message,
     pro_subscription_info_message,
+    subscription_already_cancelled_message,
+    subscription_cancelled_message,
+    subscription_info_message,
+    subscription_exists_message,
 )
 from kworkflow.telegram_bot.states import PaymentState
 
@@ -40,14 +54,18 @@ router.callback_query.filter(
 @inject
 async def pro_subscription_info(
     call: types.CallbackQuery,
-    service: FromDishka[SubscriptionService],
+    service: FromDishka[SubscriptionPaymentService],
 ):
-    plan = await service.get_plan_for_user()
-    text = pro_subscription_info_message(PlanSlug(plan.slug))
-    keyboard = build_subscription_plan_kbd(
-        slug=plan.slug,
-        price=plan.price_rub,
-    )
+    try:
+        plan = await service.get_plan_for_user()
+        text = pro_subscription_info_message(PlanSlug(plan.slug))
+        keyboard = build_subscription_plan_kbd(
+            slug=plan.slug,
+            price=plan.price_rub,
+        )
+    except ActiveSubscriptionExistsError:
+        text = subscription_exists_message()
+        keyboard = build_subscription_exists_kbd()
     await call.message.edit_text(text, reply_markup=keyboard)
 
 
@@ -55,7 +73,7 @@ async def pro_subscription_info(
 @inject
 async def create_payment(
     call: types.CallbackQuery,
-    service: FromDishka[SubscriptionService],
+    service: FromDishka[SubscriptionPaymentService],
     state: FSMContext,
     config: FromDishka[Config],
 ):
@@ -75,6 +93,9 @@ async def create_payment(
         text = payment_email_message()
         keyboard = build_payment_email_kbd()
         await state.set_state(PaymentState.set_email)
+    except ActiveSubscriptionExistsError:
+        text = subscription_exists_message()
+        keyboard = build_subscription_exists_kbd()
     with contextlib.suppress(TelegramBadRequest):
         await call.message.edit_text(text, reply_markup=keyboard)
 
@@ -83,7 +104,7 @@ async def create_payment(
 @inject
 async def set_payment_email(
     message: types.Message,
-    service: FromDishka[SubscriptionService],
+    service: FromDishka[SubscriptionPaymentService],
     state: FSMContext,
 ):
     state_clear = False
@@ -101,6 +122,42 @@ async def set_payment_email(
     except PaymentEmailValidationError:
         text = payment_email_validation_error_message()
         keyboard = build_payment_email_kbd()
+    except ActiveSubscriptionExistsError:
+        text = subscription_exists_message()
+        keyboard = build_subscription_exists_kbd()
     await message.answer(text, reply_markup=keyboard)
     if state_clear:
         await state.clear()
+
+
+@router.callback_query(F.data == "manage_subscription")
+@inject
+async def manage_subscription(
+    call: types.CallbackQuery,
+    service: FromDishka[SubscriptionManagementService],
+):
+    info = await service.get_active_subscription_info()
+    if info:
+        text = subscription_info_message(info)
+        keyboard = build_subscription_manage_kbd(
+            is_cancelled=info.is_cancelled,
+        )
+    else:
+        text = not_active_subscription_message()
+        keyboard = build_no_active_subscription_kbd()
+    await call.message.edit_text(text, reply_markup=keyboard)
+
+
+@router.callback_query(F.data == "cancel_subscription")
+@inject
+async def cancel_subscription(
+    call: types.CallbackQuery,
+    service: FromDishka[SubscriptionManagementService],
+):
+    try:
+        subscription = await service.cancel_subscription()
+        text = subscription_cancelled_message(subscription.expires_at)
+    except SubscriptionAlreadyCancelledError:
+        text = subscription_already_cancelled_message()
+    keyboard = build_subscription_cancelled_kbd()
+    await call.message.edit_text(text, reply_markup=keyboard)

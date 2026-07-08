@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
@@ -10,7 +10,7 @@ from sqlalchemy import (
     Numeric,
     String,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kworkflow.infra.database.base import Base
 
@@ -37,6 +37,9 @@ class SubscriptionPlan(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+    )
+    subscriptions: Mapped[list["Subscription"]] = relationship(
+        back_populates="plan",
     )
 
 
@@ -74,6 +77,16 @@ class Subscription(Base):
         DateTime(timezone=True),
         nullable=False,
     )
+
+    plan: Mapped["SubscriptionPlan"] = relationship(
+        back_populates="subscriptions",
+        lazy="raise",
+    )
+
+    def cancelled(self):
+        now = datetime.now(UTC)
+        self.cancelled_at = now
+        self.updated_at = now
 
 
 class PaymentStatus(StrEnum):

@@ -1,5 +1,3 @@
-from kworkflow.users.dto import CurrentUser
-from kworkflow.users.services import UserService
 from collections.abc import AsyncIterable
 
 from aiogram import Bot
@@ -71,9 +69,12 @@ from kworkflow.subscriptions.gateways import (
 )
 from kworkflow.subscriptions.services import (
     PaymentVerificationService,
-    SubscriptionService,
+    SubscriptionManagementService,
+    SubscriptionPaymentService,
 )
+from kworkflow.users.dto import CurrentUser
 from kworkflow.users.gateways import UserGateway, UserRoleGateway
+from kworkflow.users.services import UserService
 
 
 class InfraProvider(Provider):
@@ -287,8 +288,12 @@ class SubscriptionProvider(Provider):
         PaymentGateway,
         scope=Scope.REQUEST,
     )
-    subscription_service = provide(
-        SubscriptionService,
+    subscription_payment_service = provide(
+        SubscriptionPaymentService,
+        scope=Scope.REQUEST,
+    )
+    subscription_management_service = provide(
+        SubscriptionManagementService,
         scope=Scope.REQUEST,
     )
     payment_verification_service = provide(

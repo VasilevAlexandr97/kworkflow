@@ -2,6 +2,14 @@ class SubscriptionPlanNotFoundError(Exception):
     pass
 
 
+class SubscriptionAlreadyCancelledError(Exception):
+    pass
+
+
+class ActiveSubscriptionExistsError(Exception):
+    pass
+
+
 class ServiceTemporarilyUnavailableError(Exception):
     pass
 

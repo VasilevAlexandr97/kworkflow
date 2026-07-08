@@ -26,9 +26,12 @@ from kworkflow.infra.yookassa.client import (
 from kworkflow.notifications.interfaces import (
     SubscriptionActivatedNotificationQueue,
 )
+from kworkflow.subscriptions.dto import SubscriptionInfo
 from kworkflow.subscriptions.exceptions import (
+    ActiveSubscriptionExistsError,
     PaymentEmailRequiredError,
     ServiceTemporarilyUnavailableError,
+    SubscriptionAlreadyCancelledError,
     SubscriptionPlanNotFoundError,
 )
 from kworkflow.subscriptions.gateways import (
@@ -48,7 +51,7 @@ from kworkflow.subscriptions.validators import payment_email_validator
 logger = logging.getLogger(__name__)
 
 
-class SubscriptionService:
+class SubscriptionPaymentService:
     def __init__(
         self,
         subscription_plan_gateway: SubscriptionPlanGateway,
@@ -94,6 +97,9 @@ class SubscriptionService:
 
     async def get_plan_for_user(self) -> SubscriptionPlan:
         user_id = await self.id_provider.get_current_user_id()
+        is_active = await self.subscription_gateway.has_active(user_id)
+        if is_active:
+            raise ActiveSubscriptionExistsError
         return await self._get_initial_or_monthly_plan(user_id)
 
     async def get_or_create_pending_payment(
@@ -104,6 +110,9 @@ class SubscriptionService:
         lock = self._payment_lock(user_id)
         try:
             async with lock:
+                is_active = await self.subscription_gateway.has_active(user_id)
+                if is_active:
+                    raise ActiveSubscriptionExistsError
                 if email is None:
                     email = await self.payment_gateway.get_last_payment_email(
                         user_id,
@@ -294,3 +303,47 @@ class PaymentVerificationService:
             logger.info("Verification skipped — lock held by another worker")
         except RedisError:
             raise ServiceTemporarilyUnavailableError
+
+
+class SubscriptionManagementService:
+    def __init__(
+        self,
+        subscription_gateway: SubscriptionGateway,
+        id_provider: IdProvider,
+        transaction_manager: TransactionManager,
+    ):
+        self.subscription_gateway = subscription_gateway
+        self.id_provider = id_provider
+        self.transaction_manager = transaction_manager
+
+    async def get_active_subscription_info(self) -> SubscriptionInfo | None:
+        user_id = await self.id_provider.get_current_user_id()
+        subscription = await self.subscription_gateway.get_latest_active(
+            user_id,
+            with_plan=True,
+        )
+        if not subscription:
+            return None
+        is_cancelled = False
+        if subscription.cancelled_at:
+            is_cancelled = True
+        days_left = (subscription.expires_at - datetime.now(UTC)).days
+        return SubscriptionInfo(
+            plan_name=subscription.plan.name,
+            plan_slug=PlanSlug(subscription.plan.slug),
+            is_cancelled=is_cancelled,
+            started_at=subscription.started_at,
+            expires_at=subscription.expires_at,
+            days_left=days_left,
+        )
+
+    async def cancel_subscription(self) -> Subscription:
+        user_id = await self.id_provider.get_current_user_id()
+        subscription = await self.subscription_gateway.get_latest_active(
+            user_id,
+        )
+        if not subscription or subscription.cancelled_at is not None:
+            raise SubscriptionAlreadyCancelledError
+        subscription.cancelled()
+        await self.transaction_manager.commit()
+        return subscription
