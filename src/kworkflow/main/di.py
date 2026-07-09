@@ -23,7 +23,7 @@ from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.infra.taskiq.queue import (
     TaskiqProposalGeneratedNotificationQueue,
     TaskiqProposalGenerationQueue,
-    TaskiqSubscriptionActivatedNotificationQueue,
+    TaskiqSubscriptionActivatedNotificationQueue, TaskiqSubscriptionRenewalNotificationQueue,
 )
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.infra.yookassa.client import YooKassaClient
@@ -31,7 +31,7 @@ from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.interfaces import (
     ProposalGeneratedNotificationQueue,
-    SubscriptionActivatedNotificationQueue,
+    SubscriptionActivatedNotificationQueue, SubscriptionRenewalNotificationQueue,
 )
 from kworkflow.notifications.services import (
     ProjectNotificationService,
@@ -71,6 +71,7 @@ from kworkflow.subscriptions.services import (
     PaymentVerificationService,
     SubscriptionManagementService,
     SubscriptionPaymentService,
+    SubscriptionRenewalService,
 )
 from kworkflow.users.dto import CurrentUser
 from kworkflow.users.gateways import UserGateway, UserRoleGateway
@@ -273,6 +274,11 @@ class NotificationProvider(Provider):
         scope=Scope.REQUEST,
         provides=SubscriptionActivatedNotificationQueue,
     )
+    subscription_renewal_notification_queue = provide(
+        TaskiqSubscriptionRenewalNotificationQueue,
+        scope=Scope.REQUEST,
+        provides=SubscriptionRenewalNotificationQueue,
+    )
 
 
 class SubscriptionProvider(Provider):
@@ -294,6 +300,10 @@ class SubscriptionProvider(Provider):
     )
     subscription_management_service = provide(
         SubscriptionManagementService,
+        scope=Scope.REQUEST,
+    )
+    subscription_renewal_service = provide(
+        SubscriptionRenewalService,
         scope=Scope.REQUEST,
     )
     payment_verification_service = provide(

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, date
 from uuid import UUID
 
 from sqlalchemy import select
@@ -76,6 +76,15 @@ class SubscriptionGateway:
         )
         return await self.session.scalar(stmt)
 
+    async def find_due_for_renewal(self) -> list[Subscription]:
+        stmt = select(Subscription).where(
+            Subscription.expires_at <= datetime.now(UTC) + timedelta(hours=6),
+            Subscription.expires_at > datetime.now(UTC) - timedelta(days=2),
+            Subscription.cancelled_at.is_(None),
+            Subscription.renewal_attempts < 3,
+        )
+        return list(await self.session.scalars(stmt))
+
 
 class PaymentGateway:
     def __init__(self, session: AsyncSession):
@@ -105,6 +114,21 @@ class PaymentGateway:
             select(Payment.email)
             .where(
                 Payment.user_id == user_id,
+            )
+            .order_by(Payment.created_at.desc())
+            .limit(1)
+        )
+        return await self.session.scalar(stmt)
+
+    async def get_last_payment_method(
+        self,
+        user_id: UUID,
+    ) -> str | None:
+        stmt = (
+            select(Payment.yookassa_payment_method_id)
+            .where(
+                Payment.user_id == user_id,
+                Payment.yookassa_payment_method_id.is_not(None),
             )
             .order_by(Payment.created_at.desc())
             .limit(1)

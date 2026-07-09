@@ -25,6 +25,7 @@ from kworkflow.infra.yookassa.client import (
 )
 from kworkflow.notifications.interfaces import (
     SubscriptionActivatedNotificationQueue,
+    SubscriptionRenewalNotificationQueue,
 )
 from kworkflow.subscriptions.dto import SubscriptionInfo
 from kworkflow.subscriptions.exceptions import (
@@ -33,6 +34,8 @@ from kworkflow.subscriptions.exceptions import (
     ServiceTemporarilyUnavailableError,
     SubscriptionAlreadyCancelledError,
     SubscriptionPlanNotFoundError,
+    PaymentMethodNotFoundError,
+    PaymentEmailNotFoundError,
 )
 from kworkflow.subscriptions.gateways import (
     PaymentGateway,
@@ -275,16 +278,24 @@ class PaymentVerificationService:
                                 )
                                 continue
                             payment.mark_succeeded(pm.id)
+                            expires_at = (
+                                now + timedelta(days=plan.duration_days)
+                            ).replace(
+                                hour=23,
+                                minute=59,
+                                second=59,
+                                microsecond=0,
+                            )
                             subscription = Subscription(
                                 id=uuid7(),
                                 user_id=payment.user_id,
                                 plan_id=plan.id,
                                 payment_id=payment.id,
                                 started_at=now,
-                                expires_at=now
-                                + timedelta(days=plan.duration_days),
+                                expires_at=expires_at,
                                 created_at=now,
                                 updated_at=now,
+                                renewal_attempts=0,
                             )
                             await self.subscription_gateway.add(
                                 subscription,
@@ -295,7 +306,14 @@ class PaymentVerificationService:
                             )
                             await lock.extend(60)
                         elif yookassa_payment.status == Status.CANCELED:
+                            error = (
+                                yookassa_payment.cancellation_details.reason
+                                if yookassa_payment.cancellation_details
+                                else None
+                            )
                             payment.status = PaymentStatus.CANCELED
+                            payment.error = error
+                            payment.updated_at = now
                             await self.transaction_manager.commit()
                     except Exception:
                         logger.exception("VERIFY PAYMENT ERROR")
@@ -347,3 +365,145 @@ class SubscriptionManagementService:
         subscription.cancelled()
         await self.transaction_manager.commit()
         return subscription
+
+
+class SubscriptionRenewalService:
+    def __init__(
+        self,
+        subscription_plan_gateway: SubscriptionPlanGateway,
+        subscription_gateway: SubscriptionGateway,
+        payment_gateway: PaymentGateway,
+        payment_client: YooKassaClient,
+        transaction_manager: TransactionManager,
+        notify_queue: SubscriptionRenewalNotificationQueue,
+        redis_client: Redis,
+    ):
+        self.subscription_plan_gateway = subscription_plan_gateway
+        self.subscription_gateway = subscription_gateway
+        self.payment_gateway = payment_gateway
+        self.payment_client = payment_client
+        self.transaction_manager = transaction_manager
+        self.notify_queue = notify_queue
+        self.redis_client = redis_client
+
+    def _renewal_subscription_lock(self) -> Lock:
+        return Lock(
+            self.redis_client,
+            "renewal_subscription_lock",
+            timeout=60,
+            blocking_timeout=0,
+        )
+
+    async def _attemp_renewal(self, subscription: Subscription):
+        plan = await self.subscription_plan_gateway.get_by_slug(
+            slug=PlanSlug.PRO_MONTHLY,
+        )
+        if not plan:
+            raise SubscriptionPlanNotFoundError
+        payment_method = await self.payment_gateway.get_last_payment_method(
+            subscription.user_id,
+        )
+        if not payment_method:
+            raise PaymentMethodNotFoundError
+        email = await self.payment_gateway.get_last_payment_email(
+            subscription.user_id,
+        )
+        if not email:
+            raise PaymentEmailNotFoundError
+
+        payment_request = PaymentRequest(
+            amount=AmountData(
+                value=f"{plan.price_rub}",
+                currency="RUB",
+            ),
+            description=f"Продление {plan.name}",
+            payment_method_id=payment_method,
+            capture=True,
+        )
+        result = await self.payment_client.create_payment(
+            payment_request=payment_request,
+        )
+        logger.info(f"SUBSCRIPTION RENEWAL: {result}")
+        now = datetime.now(UTC)
+        if result.status == Status.SUCCEEDED:
+            subscription.finish()
+            new_payment = Payment(
+                id=uuid7(),
+                user_id=subscription.user_id,
+                yookassa_payment_id=result.id,
+                yookassa_payment_method_id=result.payment_method.id,
+                amount=plan.price_rub,
+                status=PaymentStatus.SUCCEEDED,
+                email=email,
+                link="",
+                paid_at=now,
+                created_at=now,
+                updated_at=now,
+            )
+            expires_at = (now + timedelta(days=plan.duration_days)).replace(
+                hour=23,
+                minute=59,
+                second=59,
+                microsecond=0,
+            )
+            new_subscription = Subscription(
+                id=uuid7(),
+                user_id=subscription.user_id,
+                plan_id=plan.id,
+                payment_id=new_payment.id,
+                started_at=now,
+                expires_at=expires_at,
+                cancelled_at=None,
+                created_at=now,
+                updated_at=now,
+                renewal_attempts=0,
+            )
+            await self.payment_gateway.add(new_payment)
+            await self.subscription_gateway.add(new_subscription)
+            await self.transaction_manager.commit()
+            await self.notify_queue.enqueue_renewed(
+                user_id=new_subscription.user_id,
+                new_expires_at=new_subscription.expires_at,
+            )
+        elif result.status == Status.CANCELED:
+            error = (
+                result.cancellation_details.reason
+                if result.cancellation_details
+                else None
+            )
+            pm_id = result.payment_method.id if result.payment_method else None
+            new_payment = Payment(
+                id=uuid7(),
+                user_id=subscription.user_id,
+                yookassa_payment_id=result.id,
+                yookassa_payment_method_id=pm_id,
+                amount=plan.price_rub,
+                status=PaymentStatus.FAILED,
+                email=email,
+                link="",
+                paid_at=now,
+                error=error,
+                created_at=now,
+                updated_at=now,
+            )
+            await self.payment_gateway.add(new_payment)
+            subscription.renewal_attempts += 1
+            if subscription.renewal_attempts >= 3:
+                subscription.finish()
+                await self.transaction_manager.commit()
+                await self.notify_queue.enqueue_revoked(subscription.user_id)
+            else:
+                subscription.expires_at = now + timedelta(hours=8)
+                await self.transaction_manager.commit()
+                await self.notify_queue.enqueue_retry(subscription.user_id)
+
+    async def renew_subscriptions(self):
+        lock = self._renewal_subscription_lock()
+        async with lock:
+            due = await self.subscription_gateway.find_due_for_renewal()
+            logger.info(f"DUE FOR RENEWAL SUBSCRIPTIONS: {due}")
+            for sub in due:
+                try:
+                    await self._attemp_renewal(sub)
+                except:
+                    logger.exception("ATTEMP RENEWAL SKIPPED")

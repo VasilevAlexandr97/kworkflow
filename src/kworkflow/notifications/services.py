@@ -20,6 +20,7 @@ from kworkflow.projects.gateway import ProjectGateway, ProjectProposalGateway
 from kworkflow.telegram_bot.keyboards import (
     build_project_kbd,
     build_subscription_activated_kbd,
+    build_no_active_subscription_kbd,
 )
 from kworkflow.telegram_bot.messages import project_message
 from kworkflow.users.exceptions import UserNotFoundError
@@ -148,4 +149,26 @@ class SubscriptionNotificationService:
             chat_id=user.telegram_id,
             text="👑 PRO подписка активирована!",
             keyboard=build_subscription_activated_kbd(),
+        )
+
+    async def notify_renewed(self, user_id: UUID, new_expires_at: datetime):
+        user = await self.user_gateway.get_by_id(user_id)
+        await self.telegram_notifier.send_message(
+            chat_id=user.telegram_id,
+            text=f"✅ PRO подписка продлена до {new_expires_at.strftime('%d.%m.%Y')}",
+        )
+
+    async def notify_retry(self, user_id: UUID):
+        user = await self.user_gateway.get_by_id(user_id)
+        await self.telegram_notifier.send_message(
+            chat_id=user.telegram_id,
+            text="⚠️ Не удалось списать оплату за подписку.",
+        )
+
+    async def notify_revoked(self, user_id: UUID):
+        user = await self.user_gateway.get_by_id(user_id)
+        await self.telegram_notifier.send_message(
+            chat_id=user.telegram_id,
+            text="❌ PRO доступ отключён за неуплату",
+            keyboard=build_no_active_subscription_kbd(),
         )

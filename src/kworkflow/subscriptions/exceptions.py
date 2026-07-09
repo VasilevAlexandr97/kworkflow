@@ -14,9 +14,17 @@ class ServiceTemporarilyUnavailableError(Exception):
     pass
 
 
+class PaymentEmailNotFoundError(Exception):
+    pass
+
+
 class PaymentEmailRequiredError(Exception):
     pass
 
 
 class PaymentEmailValidationError(Exception):
+    pass
+
+
+class PaymentMethodNotFoundError(Exception):
     pass

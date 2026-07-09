@@ -1,5 +1,6 @@
 import logging
 
+from datetime import datetime
 from uuid import UUID
 
 from dishka.integrations.taskiq import FromDishka, inject
@@ -14,7 +15,10 @@ from kworkflow.projects.services import (
     ProjectProposalGenerationService,
     ProjectSyncService,
 )
-from kworkflow.subscriptions.services import PaymentVerificationService
+from kworkflow.subscriptions.services import (
+    PaymentVerificationService,
+    SubscriptionRenewalService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,3 +84,39 @@ async def notify_subscription_activated(
     service: FromDishka[SubscriptionNotificationService],
 ):
     await service.notify_activated(user_id)
+
+
+@broker.task(schedule=[{"cron": "* */4 * * *"}])
+@inject
+async def auto_renew_subscriptions(
+    service: FromDishka[SubscriptionRenewalService],
+):
+    await service.renew_subscriptions()
+
+
+@broker.task()
+@inject
+async def notify_subscription_renewed(
+    user_id: UUID,
+    new_expires_at: datetime,
+    service: FromDishka[SubscriptionNotificationService],
+):
+    await service.notify_renewed(user_id, new_expires_at)
+
+
+@broker.task()
+@inject
+async def notify_subscription_retry(
+    user_id: UUID,
+    service: FromDishka[SubscriptionNotificationService],
+):
+    await service.notify_retry(user_id)
+
+
+@broker.task()
+@inject
+async def notify_subscription_revoked(
+    user_id: UUID,
+    service: FromDishka[SubscriptionNotificationService],
+):
+    await service.notify_revoked(user_id)

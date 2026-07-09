@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Numeric,
     String,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -77,7 +78,10 @@ class Subscription(Base):
         DateTime(timezone=True),
         nullable=False,
     )
-
+    renewal_attempts: Mapped[int] = mapped_column(
+        default=0,
+        server_default=text("0"),
+    )
     plan: Mapped["SubscriptionPlan"] = relationship(
         back_populates="subscriptions",
         lazy="raise",
@@ -88,12 +92,19 @@ class Subscription(Base):
         self.cancelled_at = now
         self.updated_at = now
 
+    def finish(self):
+        now = datetime.now(UTC)
+        self.cancelled_at = now
+        self.expires_at = now
+        self.updated_at = now
+
 
 class PaymentStatus(StrEnum):
     PENDING = "pending"
     SUCCEEDED = "succeeded"
     EXPIRED = "expired"
     CANCELED = "canceled"
+    FAILED = "failed"
 
 
 class Payment(Base):
@@ -116,6 +127,7 @@ class Payment(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    error: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

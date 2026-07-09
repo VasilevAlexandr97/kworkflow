@@ -58,6 +58,7 @@ class PaymentRequest(BaseModel):
     amount: AmountData
     description: str | None = None
     receipt: ReceiptData | None = None
+    payment_method_id: str | None = None
     confirmation: ConfirmationRedirectData | None = None
     save_payment_method: bool = True
     capture: bool = True
@@ -140,27 +141,6 @@ class YooKassaClient:
         except httpx.HTTPStatusError:
             logger.debug(f"RESPONSE TEXT: {resp.text}")
             raise
-
-    async def create_auto_payment(
-        self,
-        amount: str,
-        payment_method_id: str,
-        description: str,
-    ) -> dict:
-        """Автосписание с сохранённого метода оплаты."""
-        payload = {
-            "amount": {"value": amount, "currency": "RUB"},
-            "payment_method_id": payment_method_id,
-            "description": description,
-            "capture": True,
-        }
-        response = await self._client.post(
-            "/payments",
-            json=payload,
-            headers={"Idempotence-Key": str(uuid4())},
-        )
-        response.raise_for_status()
-        return response.json()
 
     async def get_payment(self, payment_id: str) -> PaymentResponse:
         resp = await self._client.get(f"/payments/{payment_id}")
