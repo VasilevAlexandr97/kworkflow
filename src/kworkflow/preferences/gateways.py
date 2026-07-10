@@ -1,11 +1,18 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, case, delete, insert, select
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import functions
+from sqlalchemy.sql.functions import count
 
-from kworkflow.preferences.dto import CategoryFollowStatusDTO
+from kworkflow.preferences.exceptions import (
+    UserCategoryFollowAlreadyExistsError,
+    UserCategoryFollowCreationError,
+)
 from kworkflow.preferences.models import (
     UserCategoryFollow,
     UserFreelancerProfile,
@@ -19,76 +26,124 @@ class UserCategoryFollowGateway:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def bulk_delete(self, user_id: UUID, category_ids: list[UUID]):
-        stmt = delete(UserCategoryFollow).where(
-            and_(
-                UserCategoryFollow.user_id == user_id,
-                UserCategoryFollow.category_id.in_(category_ids),
-            ),
-        )
-        await self.session.execute(stmt)
+    async def add(self, follow: UserCategoryFollow):
+        try:
+            self.session.add(follow)
+            await self.session.flush()
+        except IntegrityError as exc:
+            if (
+                "already exists" in str(exc.orig)
+                or "duplicate" in str(exc.orig).lower()
+            ):
+                raise UserCategoryFollowAlreadyExistsError
+            raise UserCategoryFollowCreationError
 
-    async def delete_all(self, user_id: UUID):
-        stmt = delete(UserCategoryFollow).where(
-            UserCategoryFollow.user_id == user_id,
-        )
-        await self.session.execute(stmt)
-
-    async def bulk_insert(self, follows_data: list[dict]):
-        stmt = insert(UserCategoryFollow).values(follows_data)
-        await self.session.execute(stmt)
-
-    async def get_category_follow_ids(self, user_id: UUID) -> list[UUID]:
-        stmt = select(UserCategoryFollow.category_id).where(
-            UserCategoryFollow.user_id == user_id,
-        )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
-
-    async def get_followed_categories(
-        self,
-        user_id: UUID,
-    ) -> list[ProjectCategory]:
+    async def deactivate_all(self, user_id: UUID):
         stmt = (
-            select(ProjectCategory)
-            .join(
-                UserCategoryFollow,
-                ProjectCategory.id == UserCategoryFollow.category_id,
+            update(UserCategoryFollow)
+            .values(
+                {"is_active": False},
             )
             .where(UserCategoryFollow.user_id == user_id)
         )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        await self.session.execute(stmt)
 
-    async def get_categories_with_follow_status(
+    async def deactivate_excess_follows(
         self,
         user_id: UUID,
-    ) -> list[CategoryFollowStatusDTO]:
+        keep_count: int,
+    ) -> None:
+        keep_ids_subq = (
+            select(UserCategoryFollow.category_id)
+            .where(
+                UserCategoryFollow.user_id == user_id,
+                UserCategoryFollow.is_active.is_(True),
+            )
+            .order_by(UserCategoryFollow.created_at.asc())
+            .limit(keep_count)
+            .scalar_subquery()
+        )
+        stmt = (
+            update(UserCategoryFollow)
+            .values({"is_active": False, "updated_at": datetime.now(UTC)})
+            .where(
+                UserCategoryFollow.user_id == user_id,
+                UserCategoryFollow.is_active.is_(True),
+                UserCategoryFollow.category_id.not_in(keep_ids_subq),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        await self.session.execute(stmt)
+
+    async def get(
+        self,
+        user_id: UUID,
+        category_id: UUID,
+    ) -> UserCategoryFollow | None:
+        stmt = select(UserCategoryFollow).where(
+            UserCategoryFollow.user_id == user_id,
+            UserCategoryFollow.category_id == category_id,
+        )
+        return await self.session.scalar(stmt)
+
+    async def get_category(
+        self,
+        category_id: UUID,
+    ) -> ProjectCategory | None:
+        stmt = (
+            select(ProjectCategory)
+            .where(ProjectCategory.id == category_id)
+            .limit(1)
+        )
+        return await self.session.scalar(stmt)
+
+    async def get_count_followed_categories(self, user_id: UUID) -> int:
+        stmt = select(functions.count(UserCategoryFollow.user_id)).where(
+            UserCategoryFollow.user_id == user_id,
+            UserCategoryFollow.is_active.is_(True),
+        )
+        result = await self.session.scalar(stmt)
+        if result is None:
+            return 0
+        return result
+
+    async def get_follows_with_category(
+        self,
+        user_id: UUID,
+    ) -> list[UserCategoryFollow]:
+        stmt = (
+            select(UserCategoryFollow)
+            .options(joinedload(UserCategoryFollow.category))
+            .where(
+                UserCategoryFollow.user_id == user_id,
+                UserCategoryFollow.is_active.is_(True),
+            )
+        )
+        return list(await self.session.scalars(stmt))
+
+    async def get_subcategories_with_follow_status(
+        self,
+        user_id: UUID,
+        parent_id: UUID,
+    ) -> list[tuple[ProjectCategory, bool]]:
         stmt = (
             select(
                 ProjectCategory,
-                case(
-                    (UserCategoryFollow.user_id.is_not(None), True),
-                    else_=False,
-                ).label("is_followed"),
+                UserCategoryFollow.user_id.is_not(None).label("is_followed"),
             )
             .outerjoin(
                 UserCategoryFollow,
                 and_(
                     ProjectCategory.id == UserCategoryFollow.category_id,
                     UserCategoryFollow.user_id == user_id,
+                    UserCategoryFollow.is_active.is_(True),
                 ),
             )
+            .where(ProjectCategory.parent_id == parent_id)
             .order_by(ProjectCategory.id)
         )
         result = await self.session.execute(stmt)
-        return [
-            CategoryFollowStatusDTO(
-                category=row.ProjectCategory,
-                is_followed=row.is_followed,
-            )
-            for row in result
-        ]
+        return list(result.tuples().all())
 
     async def get_users_followed_to_category(
         self,
@@ -98,7 +153,10 @@ class UserCategoryFollowGateway:
             select(User)
             .join(
                 UserCategoryFollow,
-                and_(UserCategoryFollow.user_id == User.id),
+                and_(
+                    UserCategoryFollow.user_id == User.id,
+                    UserCategoryFollow.is_active.is_(True),
+                ),
             )
             .where(UserCategoryFollow.category_id == category_id)
         )
@@ -170,13 +228,16 @@ class UserStopWordsGateway:
         return result
 
     async def get_stop_words_by_user_ids(
-        self, user_ids: list[UUID],
+        self,
+        user_ids: list[UUID],
     ) -> dict[UUID, list[str]]:
         if not user_ids:
             return {}
-        stmt = select(UserStopWord.user_id, UserStopWord.word).where(
-            UserStopWord.user_id.in_(user_ids)
-        ).order_by(UserStopWord.created_at.asc())
+        stmt = (
+            select(UserStopWord.user_id, UserStopWord.word)
+            .where(UserStopWord.user_id.in_(user_ids))
+            .order_by(UserStopWord.created_at.asc())
+        )
 
         result = await self.session.execute(stmt)
         rows = result.all()

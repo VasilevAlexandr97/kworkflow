@@ -48,6 +48,10 @@ def menu_message(follow_categories: list[ProjectCategory]) -> str:
     )
 
 
+def select_followed_categories_message() -> str:
+    return "📂 Выберите категории для мониторинга"
+
+
 def categories_saved_message(follow_categories: list[ProjectCategory]) -> str:
     follow_categories_str = "\n".join(
         f"• {cat.title}" for cat in follow_categories
@@ -162,10 +166,6 @@ def stop_words_limit_exceeded_message() -> str:
     return f"❌ Достигнут лимит в {MAX_STOP_WORDS} стоп-слов."
 
 
-def select_categories_message() -> str:
-    return "📂 Выберите категории для мониторинга"
-
-
 def generating_proposal_message() -> str:
     return "🔄 Генерирую"
 
@@ -229,6 +229,7 @@ def payment_email_validation_error_message() -> str:
 
 def subscription_exists_message():
     return "👑 У вас уже оформлена PRO подписка."
+
 
 def not_active_subscription_message() -> str:
     return (

@@ -37,23 +37,6 @@ class ProjectCategoryGateway:
         result = await self.session.scalars(stmt)
         return list(result.all())
 
-    async def get_child_categories(
-        self,
-        parent_id: UUID,
-    ) -> list[ProjectCategory]:
-        stmt = select(ProjectCategory).where(
-            ProjectCategory.parent_id == parent_id,
-        )
-        result = await self.session.scalars(stmt)
-        return list(result.all())
-
-    async def get_category_by_id(
-        self,
-        category_id: UUID,
-    ) -> ProjectCategory | None:
-        stmt = select(ProjectCategory).where(ProjectCategory.id == category_id)
-        return await self.session.scalar(stmt)
-
     async def get_categories_by_external_ids(
         self,
         external_ids: list[int],

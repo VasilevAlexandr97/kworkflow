@@ -5,7 +5,7 @@ from kworkflow.projects.models import ProjectCategory
 
 
 @dataclass
-class CategoryFollowStatusDTO:
+class CategoryWithFollowedStatusDTO:
     category: ProjectCategory
     is_followed: bool
 

@@ -1,3 +1,4 @@
+from kworkflow.subscriptions.interfaces import SubscriptionLimitsResetter
 import logging
 
 from datetime import UTC, datetime, timedelta
@@ -374,6 +375,7 @@ class SubscriptionRenewalService:
         subscription_gateway: SubscriptionGateway,
         payment_gateway: PaymentGateway,
         payment_client: YooKassaClient,
+        limits_resetter: SubscriptionLimitsResetter,
         transaction_manager: TransactionManager,
         notify_queue: SubscriptionRenewalNotificationQueue,
         redis_client: Redis,
@@ -382,6 +384,7 @@ class SubscriptionRenewalService:
         self.subscription_gateway = subscription_gateway
         self.payment_gateway = payment_gateway
         self.payment_client = payment_client
+        self.limits_resetter = limits_resetter
         self.transaction_manager = transaction_manager
         self.notify_queue = notify_queue
         self.redis_client = redis_client
@@ -423,7 +426,7 @@ class SubscriptionRenewalService:
         result = await self.payment_client.create_payment(
             payment_request=payment_request,
         )
-        logger.info(f"SUBSCRIPTION RENEWAL: {result}")
+        logger.debug(f"SUBSCRIPTION RENEWAL: {result}")
         now = datetime.now(UTC)
         if result.status == Status.SUCCEEDED:
             subscription.finish()
@@ -490,6 +493,7 @@ class SubscriptionRenewalService:
             subscription.renewal_attempts += 1
             if subscription.renewal_attempts >= 3:
                 subscription.finish()
+                await self.limits_resetter.reset_limits(subscription.user_id)
                 await self.transaction_manager.commit()
                 await self.notify_queue.enqueue_revoked(subscription.user_id)
             else:

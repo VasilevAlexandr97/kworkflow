@@ -1,7 +1,5 @@
 import contextlib
 
-from uuid import UUID
-
 from aiogram import Bot, F, Router, types
 from aiogram.enums import ChatType
 from aiogram.exceptions import TelegramBadRequest
@@ -9,6 +7,9 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.preferences.consts import MAX_STOP_WORDS
+from kworkflow.preferences.exceptions import (
+    UserCategoryFollowLimitExceededError,
+)
 from kworkflow.preferences.services import (
     UserCategoryFollowService,
     UserFreelancerProfileService,
@@ -16,11 +17,11 @@ from kworkflow.preferences.services import (
 )
 from kworkflow.projects.services import ProjectCategoryService
 from kworkflow.telegram_bot.keyboards import (
-    CatAction,
-    CategoryCB,
+    ManageAction,
+    ManageFollowedCategoriesCB,
     build_edit_profile_kbd,
-    build_follow_categories_kbd,
-    build_follow_subcategories_kbd,
+    build_followed_categories_kbd,
+    build_followed_subcategories_kbd,
     build_main_menu_kbd,
     build_profile_menu_kbd,
     build_start_add_stop_words_kbd,
@@ -28,11 +29,10 @@ from kworkflow.telegram_bot.keyboards import (
     build_stop_words_menu_kbd,
 )
 from kworkflow.telegram_bot.messages import (
-    categories_saved_message,
     empty_stop_words_delete_message,
     profile_info_message,
     profile_not_set_message,
-    select_categories_message,
+    select_followed_categories_message,
     start_add_stop_words_message,
     start_delete_stop_words_message,
     start_edit_profile_message,
@@ -53,144 +53,87 @@ router.callback_query.filter(
 )
 
 
+@router.callback_query(F.data == "configure_followed_categories")
 @router.callback_query(
-    CategoryCB.filter(
-        F.action == CatAction.BROWSE,
-    ),
-    CategoryCB.filter(
-        F.category_id.is_(None),
+    ManageFollowedCategoriesCB.filter(
+        F.action == ManageAction.BROWSE_CATEGORIES,
     ),
 )
 @inject
-async def start_category_follow(
+async def start_configure_followed_categories(
+    call: types.CallbackQuery,
+    service: FromDishka[ProjectCategoryService],
+):
+    root_categories = await service.get_root_categories()
+    if not root_categories:
+        pass
+    text = select_followed_categories_message()
+    keyboard = build_followed_categories_kbd(root_categories)
+    await call.message.edit_text(text, reply_markup=keyboard)
+
+
+@router.callback_query(
+    ManageFollowedCategoriesCB.filter(
+        F.action == ManageAction.BROWSE_SUBCATEGORIES,
+    ),
+    ManageFollowedCategoriesCB.filter(
+        F.category_id.is_not(None),
+    ),
+)
+@inject
+async def browse_followed_subcategories(
     call: types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
-    state: FSMContext,
+    callback_data: ManageFollowedCategoriesCB,
 ):
-    result = await service.get_categories_with_follow_status()
-    root_categories = [
-        r.category for r in result if r.category.parent_id is None
-    ]
-    follow_category_ids = [str(r.category.id) for r in result if r.is_followed]
-    text = select_categories_message()
-    keyboard = build_follow_categories_kbd(root_categories)
-    await state.set_data({"follow_category_ids": follow_category_ids})
-    await call.message.answer(text, reply_markup=keyboard)
-    await call.message.edit_reply_markup(reply_markup=None)
-
-
-@router.callback_query(CategoryCB.filter(F.action == CatAction.BACK))
-@inject
-async def back_root_categories(
-    call: types.CallbackQuery,
-    service: FromDishka[ProjectCategoryService],
-):
-    categories = await service.get_root_categories()
-    text = select_categories_message()
-    keyboard = build_follow_categories_kbd(categories)
-    await call.message.edit_text(text, reply_markup=keyboard)
-
-
-@router.callback_query(
-    CategoryCB.filter(F.action == CatAction.BROWSE),
-    CategoryCB.filter(F.category_id.is_not(None)),
-)
-@inject
-async def show_follow_subcategories(
-    call: types.CallbackQuery,
-    callback_data: CategoryCB,
-    service: FromDishka[ProjectCategoryService],
-    state: FSMContext,
-):
-    if callback_data.category_id is None:
-        return
-    state_data = await state.get_data()
-    categories = await service.get_subcategories(callback_data.category_id)
-    follow_category_ids = [
-        UUID(i) for i in state_data.get("follow_category_ids", [])
-    ]
-    state_data["root_id"] = str(callback_data.category_id)
-    text = select_categories_message()
-    keyboard = build_follow_subcategories_kbd(
-        categories,
-        follow_category_ids,
+    categories = await service.get_subcategories_with_follow_status(
+        parent_id=callback_data.category_id,
     )
-    await state.set_data(state_data)
+    text = select_followed_categories_message()
+    keyboard = build_followed_subcategories_kbd(categories)
     await call.message.edit_text(text, reply_markup=keyboard)
 
 
 @router.callback_query(
-    CategoryCB.filter(F.action == CatAction.FOLLOW),
-    CategoryCB.filter(F.category_id.is_not(None)),
+    ManageFollowedCategoriesCB.filter(F.action == ManageAction.FOLLOW),
+    ManageFollowedCategoriesCB.filter(F.category_id.is_not(None)),
 )
 @router.callback_query(
-    CategoryCB.filter(F.action == CatAction.UNFOLLOW),
-    CategoryCB.filter(F.category_id.is_not(None)),
+    ManageFollowedCategoriesCB.filter(F.action == ManageAction.UNFOLLOW),
+    ManageFollowedCategoriesCB.filter(F.category_id.is_not(None)),
 )
 @inject
 async def follow_category(
     call: types.CallbackQuery,
-    callback_data: CategoryCB,
-    service: FromDishka[ProjectCategoryService],
-    state: FSMContext,
-):
-    state_data = await state.get_data()
-    root_id = UUID(state_data.get("root_id"))
-    categories = await service.get_subcategories(root_id)
-    follow_category_ids: list = [
-        UUID(i) for i in state_data.get("follow_category_ids", [])
-    ]
-    if callback_data.action == CatAction.FOLLOW:
-        follow_category_ids.append(callback_data.category_id)
-    else:
-        follow_category_ids = [
-            i for i in follow_category_ids if i != callback_data.category_id
-        ]
-    state_data["follow_category_ids"] = [str(i) for i in follow_category_ids]
-    await state.set_data(state_data)
-    text = select_categories_message()
-    keyboard = build_follow_subcategories_kbd(
-        categories,
-        follow_category_ids,
-    )
-    await call.message.edit_text(text, reply_markup=keyboard)
-
-
-@router.callback_query(
-    CategoryCB.filter(F.action == CatAction.CONFIRM),
-)
-@inject
-async def save_category_follow(
-    call: types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
-    current_user: FromDishka[CurrentUser],
-    state: FSMContext,
+    callback_data: ManageFollowedCategoriesCB,
 ):
-    state_data = await state.get_data()
-    follow_category_ids = [
-        UUID(i) for i in state_data.get("follow_category_ids", [])
-    ]
-    categories = await service.sync_user_follows(follow_category_ids)
-    text = categories_saved_message(categories)
-    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
-    await call.message.edit_text(text, reply_markup=keyboard)
-    await state.clear()
+    try:
+        categories = await service.toggle_category_follow(
+            callback_data.category_id
+        )
+        text = select_followed_categories_message()
+        keyboard = build_followed_subcategories_kbd(categories)
+        await call.message.edit_text(text, reply_markup=keyboard)
+    except UserCategoryFollowLimitExceededError:
+        await call.answer(
+            "Вам доступно только 2 категории, перейдите на ПРО",
+            show_alert=True,
+        )
 
 
 @router.callback_query(
-    CategoryCB.filter(F.action == CatAction.UNFOLLOW_ALL),
+    ManageFollowedCategoriesCB.filter(F.action == ManageAction.UNFOLLOW_ALL),
 )
 @inject
 async def unfollow_all_categories(
     call: types.CallbackQuery,
     service: FromDishka[UserCategoryFollowService],
-    current_user: FromDishka[CurrentUser],
     state: FSMContext,
 ):
     await service.unfollow_all_categories()
     text = unfollow_all_categories_message()
-    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
-    await call.message.edit_text(text, reply_markup=keyboard)
+    await call.answer(text, show_alert=True)
     await state.clear()
 
 

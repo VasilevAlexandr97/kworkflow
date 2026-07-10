@@ -9,21 +9,26 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from kworkflow.preferences.dto import CategoryWithFollowedStatusDTO
 from kworkflow.projects.models import ProjectCategory
 from kworkflow.subscriptions.models import PlanSlug
 
 
-class CatAction(StrEnum):
-    BROWSE = "browse"
+class MainMenuCB(CallbackData, prefix="main_menu"):
+    delete_message: bool = False
+
+
+class ManageAction(StrEnum):
+    BROWSE_CATEGORIES = "browse_categories"
+    BROWSE_SUBCATEGORIES = "browse_subcategories"
     FOLLOW = "follow"
     UNFOLLOW = "unfollow"
     UNFOLLOW_ALL = "unfollow_all"
-    BACK = "back"
     CONFIRM = "confirm"
 
 
-class CategoryCB(CallbackData, prefix="cat"):
-    action: CatAction
+class ManageFollowedCategoriesCB(CallbackData, prefix="manage_cat"):
+    action: ManageAction
     category_id: UUID | None = None
 
 
@@ -31,15 +36,11 @@ class GenerateProposalCB(CallbackData, prefix="gen_proposal"):
     project_id: UUID
 
 
-class MainMenuCB(CallbackData, prefix="main_menu"):
-    delete_message: bool = False
-
-
 def build_start_kbd() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="📂 Категории",
-        callback_data=CategoryCB(action=CatAction.BROWSE).pack(),
+        callback_data="configure_followed_categories",
     )
     return builder.as_markup()
 
@@ -49,7 +50,7 @@ def build_main_menu_kbd(is_pro: bool = False):
     builder.row(
         InlineKeyboardButton(
             text="📂 Категории",
-            callback_data=CategoryCB(action=CatAction.BROWSE).pack(),
+            callback_data="configure_followed_categories",
         ),
     )
     builder.row(
@@ -81,7 +82,7 @@ def build_main_menu_kbd(is_pro: bool = False):
     return builder.as_markup()
 
 
-def build_follow_categories_kbd(
+def build_followed_categories_kbd(
     categories: list[ProjectCategory],
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -89,8 +90,8 @@ def build_follow_categories_kbd(
         builder.row(
             InlineKeyboardButton(
                 text=category.title,
-                callback_data=CategoryCB(
-                    action=CatAction.BROWSE,
+                callback_data=ManageFollowedCategoriesCB(
+                    action=ManageAction.BROWSE_SUBCATEGORIES,
                     category_id=category.id,
                 ).pack(),
             ),
@@ -98,16 +99,10 @@ def build_follow_categories_kbd(
     builder.row(
         InlineKeyboardButton(
             text="❌ Отписаться от всех",
-            callback_data=CategoryCB(
-                action=CatAction.UNFOLLOW_ALL,
+            callback_data=ManageFollowedCategoriesCB(
+                action=ManageAction.UNFOLLOW_ALL,
                 category_id=None,
             ).pack(),
-        ),
-    )
-    builder.row(
-        InlineKeyboardButton(
-            text="💾 Сохранить",
-            callback_data=CategoryCB(action=CatAction.CONFIRM).pack(),
         ),
     )
     builder.row(
@@ -119,37 +114,38 @@ def build_follow_categories_kbd(
     return builder.as_markup()
 
 
-def build_follow_subcategories_kbd(
-    categories: list[ProjectCategory],
-    follow_category_ids: list[UUID],
+def build_followed_subcategories_kbd(
+    categories: list[CategoryWithFollowedStatusDTO],
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for category in categories:
-        status = "✅" if category.id in follow_category_ids else "⬜️"
+        status = "✅" if category.is_followed else "⬜️"
         action = (
-            CatAction.FOLLOW
-            if category.id not in follow_category_ids
-            else CatAction.UNFOLLOW
+            ManageAction.FOLLOW
+            if not category.is_followed
+            else ManageAction.UNFOLLOW
         )
         builder.row(
             InlineKeyboardButton(
-                text=f"{status} {category.title}",
-                callback_data=CategoryCB(
+                text=f"{status} {category.category.title}",
+                callback_data=ManageFollowedCategoriesCB(
                     action=action,
-                    category_id=category.id,
+                    category_id=category.category.id,
                 ).pack(),
             ),
         )
     builder.row(
         InlineKeyboardButton(
             text="🔙 Назад",
-            callback_data=CategoryCB(action=CatAction.BACK).pack(),
+            callback_data=ManageFollowedCategoriesCB(
+                action=ManageAction.BROWSE_CATEGORIES,
+            ).pack(),
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text="💾 Подтвердить",
-            callback_data=CategoryCB(action=CatAction.CONFIRM).pack(),
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
         ),
     )
     return builder.as_markup()

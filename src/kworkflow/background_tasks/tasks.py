@@ -50,9 +50,6 @@ async def generate_project_proposal_task(
     project_id: UUID,
     service: FromDishka[ProjectProposalGenerationService],
 ):
-    logger.info(
-        f"DO GENERATE PROJECT PROPOSAL TASK: user_id={user_id}, project_id={project_id}"
-    )
     await service.generate_proposal_for_user(
         user_id=user_id,
         project_id=project_id,

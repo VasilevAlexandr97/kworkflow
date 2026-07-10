@@ -1,11 +1,17 @@
-from kworkflow.preferences.consts import MAX_LENGTH_STOP_WORD
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, func, UUID as SA_UUID, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    String,
+    func,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kworkflow.infra.database.base import Base
+from kworkflow.preferences.consts import MAX_LENGTH_STOP_WORD
 
 
 class UserCategoryFollow(Base):
@@ -19,7 +25,20 @@ class UserCategoryFollow(Base):
         ForeignKey("project_categories.id", ondelete="CASCADE"),
         primary_key=True,
     )
+    is_active: Mapped[bool] = mapped_column(
+        default=True,
+        server_default=text("true"),
+    )
+    category: Mapped["ProjectCategory"] = relationship(
+        back_populates="follows",
+        uselist=False,
+    )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),

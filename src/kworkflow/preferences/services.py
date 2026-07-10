@@ -1,74 +1,145 @@
+import logging
+
 from datetime import UTC, datetime
 from uuid import UUID
 
 from kworkflow.auth.id_provider import IdProvider
+from kworkflow.common.subscription_checker import SubscriptionChecker
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.preferences.consts import MAX_LENGTH_STOP_WORD, MAX_STOP_WORDS
-from kworkflow.preferences.dto import CategoryFollowStatusDTO
+from kworkflow.preferences.dto import CategoryWithFollowedStatusDTO
+from kworkflow.preferences.exceptions import (
+    UserCategoryFollowAlreadyExistsError,
+    UserCategoryFollowLimitExceededError,
+)
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserFreelancerProfileGateway,
     UserStopWordsGateway,
 )
-from kworkflow.preferences.models import UserFreelancerProfile, UserStopWord
-from kworkflow.projects.gateway import ProjectCategoryGateway
+from kworkflow.preferences.models import (
+    UserCategoryFollow,
+    UserFreelancerProfile,
+    UserStopWord,
+)
+from kworkflow.projects.consts import MAX_FREE_CATEGORIES, MAX_PRO_CATEGORIES
+from kworkflow.projects.exceptions import ProjectCategoryNotFoundError
 from kworkflow.projects.models import ProjectCategory
+from kworkflow.users.models import Role
+
+logger = logging.getLogger(__name__)
 
 
 class UserCategoryFollowService:
     def __init__(
         self,
-        category_gateway: ProjectCategoryGateway,
         follow_gateway: UserCategoryFollowGateway,
+        subscription_checker: SubscriptionChecker,
         id_provider: IdProvider,
         transaction_manager: TransactionManager,
     ):
-        self.category_gateway = category_gateway
         self.follow_gateway = follow_gateway
+        self.subscription_checker = subscription_checker
         self.id_provider = id_provider
         self.transaction_manager = transaction_manager
 
-    async def get_categories_with_follow_status(
+    async def _get_subcategories_with_follow_status(
         self,
-    ) -> list[CategoryFollowStatusDTO]:
-        user_id = await self.id_provider.get_current_user_id()
-        return await self.follow_gateway.get_categories_with_follow_status(
-            user_id,
+        user_id: UUID,
+        parent_id: UUID,
+    ) -> list[CategoryWithFollowedStatusDTO]:
+        rows = await self.follow_gateway.get_subcategories_with_follow_status(
+            user_id=user_id,
+            parent_id=parent_id,
         )
+        return [
+            CategoryWithFollowedStatusDTO(category=row[0], is_followed=row[1])
+            for row in rows
+        ]
+
+    async def get_subcategories_with_follow_status(
+        self,
+        parent_id: UUID,
+    ) -> list[CategoryWithFollowedStatusDTO]:
+        user_id = await self.id_provider.get_current_user_id()
+        return await self._get_subcategories_with_follow_status(
+            user_id=user_id,
+            parent_id=parent_id,
+        )
+
+    async def _get_followed_categories(
+        self,
+        user_id: UUID,
+    ) -> list[ProjectCategory]:
+        follows = await self.follow_gateway.get_follows_with_category(user_id)
+        return [follow.category for follow in follows]
 
     async def get_followed_categories(self) -> list[ProjectCategory]:
         user_id = await self.id_provider.get_current_user_id()
-        return await self.follow_gateway.get_followed_categories(user_id)
+        return await self._get_followed_categories(user_id)
 
-    async def unfollow_all_categories(self):
+    async def unfollow_all_categories(self) -> list[ProjectCategory]:
         user_id = await self.id_provider.get_current_user_id()
-        await self.follow_gateway.delete_all(user_id)
+        await self.follow_gateway.deactivate_all(user_id)
         await self.transaction_manager.commit()
+        return await self._get_followed_categories(user_id)
 
-    async def sync_user_follows(self, new_follow_ids: list[UUID]):
+    async def toggle_category_follow(
+        self,
+        category_id: UUID,
+    ) -> list[CategoryWithFollowedStatusDTO]:
         user_id = await self.id_provider.get_current_user_id()
-        follow_ids = await self.follow_gateway.get_category_follow_ids(user_id)
-        exsisting_ids = set(follow_ids)
-        new_ids = set(new_follow_ids)
-
-        to_delete = exsisting_ids - new_ids
-        to_add = new_ids - exsisting_ids
-
-        if to_delete:
-            await self.follow_gateway.bulk_delete(user_id, list(to_delete))
-
-        if to_add:
-            follows_data = [
-                {
-                    "user_id": user_id,
-                    "category_id": category_id,
-                }
-                for category_id in to_add
-            ]
-            await self.follow_gateway.bulk_insert(follows_data)
-
-        await self.transaction_manager.commit()
-        return await self.follow_gateway.get_followed_categories(user_id)
+        user_role = await self.id_provider.get_role()
+        category = await self.follow_gateway.get_category(category_id)
+        if not category:
+            raise ProjectCategoryNotFoundError
+        follow = await self.follow_gateway.get(
+            user_id=user_id,
+            category_id=category_id,
+        )
+        now = datetime.now(UTC)
+        is_pro = await self.subscription_checker.is_pro_subscription(user_id)
+        limit = MAX_FREE_CATEGORIES if not is_pro else MAX_PRO_CATEGORIES
+        if follow:
+            if follow.is_active:
+                follow.is_active = False
+            else:
+                count = (
+                    await self.follow_gateway.get_count_followed_categories(
+                        user_id,
+                    )
+                )
+                if count + 1 > limit and user_role != Role.ADMIN:
+                    raise UserCategoryFollowLimitExceededError
+                follow.is_active = True
+            follow.updated_at = now
+            await self.transaction_manager.commit()
+        else:
+            count = await self.follow_gateway.get_count_followed_categories(
+                user_id,
+            )
+            if count + 1 > limit and user_role != Role.ADMIN:
+                raise UserCategoryFollowLimitExceededError
+            new_follow = UserCategoryFollow(
+                user_id=user_id,
+                category_id=category_id,
+                is_active=True,
+                created_at=now,
+                updated_at=now,
+            )
+            try:
+                await self.follow_gateway.add(new_follow)
+                await self.transaction_manager.commit()
+            except UserCategoryFollowAlreadyExistsError:
+                logger.info(
+                    "UserCategoryFollow Already Exists "
+                    f"user_id={user_id}, category_id={category_id}",
+                )
+        # parent_id переработать метод и забирать из UserCategoryFollow
+        return await self._get_subcategories_with_follow_status(
+            user_id=user_id,
+            parent_id=category.parent_id,
+        )
 
 
 class UserFreelancerProfileService:

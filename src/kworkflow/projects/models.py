@@ -39,6 +39,10 @@ class ProjectCategory(Base):
         back_populates="category",
         cascade="all, delete-orphan",
     )
+    follows: Mapped[list["UserCategoryFollow"]] = relationship(
+        back_populates="category",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"ProjectCategory(id={self.id}, title={self.title})"

@@ -1,7 +1,7 @@
-import traceback
 import html
 import logging
 import re
+import traceback
 
 from datetime import UTC, datetime
 from uuid import UUID, uuid7
@@ -86,12 +86,6 @@ class ProjectCategoryService:
 
     async def get_root_categories(self) -> list[ProjectCategory]:
         return await self.gateway.get_root_categories()
-
-    async def get_subcategories(
-        self,
-        parent_id: UUID,
-    ) -> list[ProjectCategory]:
-        return await self.gateway.get_child_categories(parent_id)
 
 
 class ProjectSyncService:

@@ -18,12 +18,14 @@ from kworkflow.auth.id_provider import (
     WorkerIdProvider,
 )
 from kworkflow.auth.telegram_auth import TelegramAuth
+from kworkflow.common.subscription_checker import SubscriptionChecker
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.infra.taskiq.queue import (
     TaskiqProposalGeneratedNotificationQueue,
     TaskiqProposalGenerationQueue,
-    TaskiqSubscriptionActivatedNotificationQueue, TaskiqSubscriptionRenewalNotificationQueue,
+    TaskiqSubscriptionActivatedNotificationQueue,
+    TaskiqSubscriptionRenewalNotificationQueue,
 )
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.infra.yookassa.client import YooKassaClient
@@ -31,7 +33,8 @@ from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.interfaces import (
     ProposalGeneratedNotificationQueue,
-    SubscriptionActivatedNotificationQueue, SubscriptionRenewalNotificationQueue,
+    SubscriptionActivatedNotificationQueue,
+    SubscriptionRenewalNotificationQueue,
 )
 from kworkflow.notifications.services import (
     ProjectNotificationService,
@@ -62,10 +65,17 @@ from kworkflow.projects.services import (
     ProjectProposalRequestService,
     ProjectSyncService,
 )
+from kworkflow.subscriptions.checker import (
+    SubscriptionCheckerImpl,
+)
 from kworkflow.subscriptions.gateways import (
     PaymentGateway,
     SubscriptionGateway,
     SubscriptionPlanGateway,
+)
+from kworkflow.subscriptions.interfaces import SubscriptionLimitsResetter
+from kworkflow.subscriptions.limits_resetter import (
+    SubscriptionLimitsResetterImpl,
 )
 from kworkflow.subscriptions.services import (
     PaymentVerificationService,
@@ -309,6 +319,16 @@ class SubscriptionProvider(Provider):
     payment_verification_service = provide(
         PaymentVerificationService,
         scope=Scope.REQUEST,
+    )
+    subscription_checker = provide(
+        SubscriptionCheckerImpl,
+        scope=Scope.REQUEST,
+        provides=SubscriptionChecker,
+    )
+    subscription_limits_resetter = provide(
+        SubscriptionLimitsResetterImpl,
+        scope=Scope.REQUEST,
+        provides=SubscriptionLimitsResetter,
     )
 
 
