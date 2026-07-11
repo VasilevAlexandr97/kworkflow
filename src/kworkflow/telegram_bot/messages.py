@@ -1,6 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 
+from kworkflow.preferences.consts import (
+    MAX_FREE_CATEGORIES,
+    MAX_FREE_STOP_WORDS,
+    MAX_PRO_STOP_WORDS,
+)
 from kworkflow.projects.models import Project, ProjectCategory
 from kworkflow.subscriptions.dto import SubscriptionInfo
 from kworkflow.subscriptions.models import PlanSlug
@@ -177,14 +182,21 @@ def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
     text = (
         "👑 PRO подписка\n\n"
         "Открой полный доступ к возможностям бота:\n\n"
-        "📂 Все категории — подписывайся не на 2, а на любое "
-        "количество категорий и не пропускай ни одного нового проекта\n\n"
+        f"📂 Все категории — подписывайся не на {MAX_FREE_CATEGORIES}, "
+        "а на любое количество категорий и не пропускай ни одного "
+        "нового проекта\n\n"
         "🔔 Мгновенные уведомления — узнавай о новых заказах "
-        "в выбранных категориях первым, пока их не разобрали конкуренты\n\n"
-        "🤖 100 генераций откликов — вместо 3 бесплатных получи 100 откликов, "
-        "сгенерированных нейросетью, которые помогут выделиться среди фрилансеров\n\n"
-        "⚡️ Экономия времени — не нужно придумывать текст отклика самому, "
-        "ИИ сделает это за секунды\n\n"
+        "в выбранных категориях первым, пока их не разобрали "
+        "конкуренты\n\n"
+        "🤖 100 генераций откликов в месяц — вместо 3 бесплатных "
+        "получи 100 откликов в месяц, сгенерированных нейросетью, "
+        "которые помогут выделиться среди фрилансеров\n\n"
+        "⚡️ Экономия времени — не нужно придумывать текст отклика "
+        "самому, ИИ сделает это за секунды\n\n"
+        f"🚫 {MAX_PRO_STOP_WORDS} стоп-слов — вместо "
+        f"{MAX_FREE_STOP_WORDS} бесплатных фильтруй заказы по "
+        f"{MAX_PRO_STOP_WORDS} стоп-словам и отсекай неподходящие "
+        "проекты\n\n"
     )
     if plan_slug == PlanSlug.PRO_INITIAL:
         text += (
