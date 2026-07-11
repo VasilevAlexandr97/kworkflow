@@ -7,3 +7,7 @@ class SubscriptionChecker(Protocol):
     @abstractmethod
     async def is_pro_subscription(self, user_id: UUID) -> bool:
         raise NotImplementedError
+
+    @abstractmethod
+    async def is_pro_user(self, user_id: UUID) -> bool:
+        raise NotImplementedError

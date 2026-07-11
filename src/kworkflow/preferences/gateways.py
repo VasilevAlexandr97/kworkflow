@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import functions
-from sqlalchemy.sql.functions import count
 
 from kworkflow.preferences.exceptions import (
     UserCategoryFollowAlreadyExistsError,
@@ -205,6 +204,22 @@ class UserStopWordsGateway:
                 UserStopWord.user_id == user_id,
                 UserStopWord.word.in_(words),
             ),
+        )
+        await self.session.execute(stmt)
+
+    async def delete_excess(self, user_id: UUID, keep_count: int) -> None:
+        keep_words_subq = (
+            select(UserStopWord.word)
+            .where(
+                UserStopWord.user_id == user_id,
+            )
+            .order_by(UserStopWord.created_at.asc())
+            .limit(keep_count)
+            .scalar_subquery()
+        )
+        stmt = delete(UserStopWord).where(
+            UserStopWord.user_id == user_id,
+            UserStopWord.word.not_in(keep_words_subq),
         )
         await self.session.execute(stmt)
 

@@ -1,7 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
 
-from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.projects.models import Project, ProjectCategory
 from kworkflow.subscriptions.dto import SubscriptionInfo
 from kworkflow.subscriptions.models import PlanSlug
@@ -52,17 +51,10 @@ def select_followed_categories_message() -> str:
     return "📂 Выберите категории для мониторинга"
 
 
-def categories_saved_message(follow_categories: list[ProjectCategory]) -> str:
-    follow_categories_str = "\n".join(
-        f"• {cat.title}" for cat in follow_categories
-    )
-    if not follow_categories:
-        follow_categories_str = "• Нет отслеживаемых категорий"
+def categories_limit_exceeded_message(limit: int) -> str:
     return (
-        "✅ Настройка завершена.\n\n"
-        "📂Выбранные категории:\n"
-        f"{follow_categories_str}\n\n"
-        "Мониторинг активирован — уведомления о новых проектах будут приходить автоматически."
+        f"🔒 Бесплатный тариф ограничен {limit} категориями. "
+        "Перейдите на PRO для доступа ко всем категориям."
     )
 
 
@@ -115,7 +107,7 @@ def start_edit_profile_message() -> str:
     )
 
 
-def stop_words_menu_message(words: list[str]) -> str:
+def stop_words_menu_message(words: list[str], limit: int) -> str:
     stop_words_list = "\n".join(
         f"{i}. {word}" for i, word in enumerate(words, start=1)
     )
@@ -125,7 +117,7 @@ def stop_words_menu_message(words: list[str]) -> str:
         "Если в названии или описании нового проекта "
         "встретится такое слово — вы <b>не получите</b> "
         "уведомление об этом проекте.\n\n"
-        f"📝 Ваши стоп-слова ({len(words)}/{MAX_STOP_WORDS})\n\n"
+        f"📝 Ваши стоп-слова ({len(words)}/{limit})\n\n"
         f"{stop_words_list}"
     )
 
@@ -162,8 +154,8 @@ def empty_stop_words_delete_message() -> str:
     return "У вас пока нет стоп-слов, поэтому удалять нечего."
 
 
-def stop_words_limit_exceeded_message() -> str:
-    return f"❌ Достигнут лимит в {MAX_STOP_WORDS} стоп-слов."
+def stop_words_limit_exceeded_message(limit: int) -> str:
+    return f"❌ Достигнут лимит в {limit} стоп-слов."
 
 
 def generating_proposal_message() -> str:

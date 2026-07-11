@@ -6,7 +6,6 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
-from kworkflow.preferences.consts import MAX_STOP_WORDS
 from kworkflow.preferences.exceptions import (
     UserCategoryFollowLimitExceededError,
 )
@@ -22,7 +21,6 @@ from kworkflow.telegram_bot.keyboards import (
     build_edit_profile_kbd,
     build_followed_categories_kbd,
     build_followed_subcategories_kbd,
-    build_main_menu_kbd,
     build_profile_menu_kbd,
     build_start_add_stop_words_kbd,
     build_start_delete_stop_words_kbd,
@@ -39,12 +37,12 @@ from kworkflow.telegram_bot.messages import (
     stop_words_limit_exceeded_message,
     stop_words_menu_message,
     unfollow_all_categories_message,
+    categories_limit_exceeded_message,
 )
 from kworkflow.telegram_bot.states import (
     FreelancerProfileState,
     StopWordsState,
 )
-from kworkflow.users.dto import CurrentUser
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -108,18 +106,18 @@ async def follow_category(
     service: FromDishka[UserCategoryFollowService],
     callback_data: ManageFollowedCategoriesCB,
 ):
+    if not callback_data.category_id:
+        return
     try:
-        categories = await service.toggle_category_follow(
-            callback_data.category_id
+        result = await service.toggle_category_follow(
+            callback_data.category_id,
         )
         text = select_followed_categories_message()
-        keyboard = build_followed_subcategories_kbd(categories)
+        keyboard = build_followed_subcategories_kbd(result.categories)
         await call.message.edit_text(text, reply_markup=keyboard)
-    except UserCategoryFollowLimitExceededError:
-        await call.answer(
-            "Вам доступно только 2 категории, перейдите на ПРО",
-            show_alert=True,
-        )
+    except UserCategoryFollowLimitExceededError as exc:
+        text = categories_limit_exceeded_message(exc.limit)
+        await call.answer(text, show_alert=True)
 
 
 @router.callback_query(
@@ -205,8 +203,8 @@ async def stop_words_menu(
     service: FromDishka[UserStopWordsService],
     state: FSMContext,
 ):
-    user_stop_words = await service.get_stop_words()
-    text = stop_words_menu_message(user_stop_words)
+    result = await service.get_stop_words()
+    text = stop_words_menu_message(words=result.words, limit=result.limit)
     keyboard = build_stop_words_menu_kbd()
     await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
@@ -219,9 +217,9 @@ async def start_add_stop_words(
     service: FromDishka[UserStopWordsService],
     state: FSMContext,
 ):
-    count_user_stop_words = await service.count_stop_words()
-    if count_user_stop_words >= MAX_STOP_WORDS:
-        text = stop_words_limit_exceeded_message()
+    result = await service.count_stop_words()
+    if result.count >= result.limit:
+        text = stop_words_limit_exceeded_message(result.limit)
         await call.answer(text, show_alert=True)
     else:
         text = start_add_stop_words_message()
@@ -242,8 +240,8 @@ async def add_stop_words(
     state_data = await state.get_data()
     last_message_id = state_data.get("last_message_id")
     stop_words = message.text.split(",")
-    user_stop_words = await service.add_stop_words(stop_words)
-    text = stop_words_menu_message(words=user_stop_words)
+    result = await service.add_stop_words(stop_words)
+    text = stop_words_menu_message(words=result.words, limit=result.limit)
     keyboard = build_stop_words_menu_kbd()
     if last_message_id is not None:
         with contextlib.suppress(TelegramBadRequest):
@@ -259,12 +257,12 @@ async def start_delete_stop_words(
     service: FromDishka[UserStopWordsService],
     state: FSMContext,
 ):
-    stop_words = await service.get_stop_words()
-    if not stop_words:
+    result = await service.get_stop_words()
+    if not result.words:
         text = empty_stop_words_delete_message()
         await call.answer(text, show_alert=True)
     else:
-        text = start_delete_stop_words_message(stop_words)
+        text = start_delete_stop_words_message(result.words)
         keyboard = build_start_delete_stop_words_kbd()
         await state.set_data({"last_message_id": call.message.message_id})
         await state.set_state(StopWordsState.delete)
@@ -282,8 +280,8 @@ async def delete_stop_words(
     state_data = await state.get_data()
     last_message_id = state_data.get("last_message_id")
     stop_words = message.text.split(",")
-    user_stop_words = await service.delete_stop_words(stop_words)
-    text = stop_words_menu_message(words=user_stop_words)
+    result = await service.delete_stop_words(stop_words)
+    text = stop_words_menu_message(words=result.words, limit=result.limit)
     keyboard = build_stop_words_menu_kbd()
     if last_message_id is not None:
         with contextlib.suppress(TelegramBadRequest):

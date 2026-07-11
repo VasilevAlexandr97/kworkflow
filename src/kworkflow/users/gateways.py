@@ -57,12 +57,11 @@ class UserRoleGateway:
             .join_from(User, UserRole)
             .where(User.telegram_id == telegram_id)
         )
-        result = await self.session.execute(stmt)
-        rows = result.all()
-        if not rows:
+        result = await self.session.scalar(stmt)
+        if not result:
             raise UserRoleNotFoundError
-        logger.info(f"Result: {result}")
-        return Role(rows[0][0])
+        logger.debug(f"USER ROLE: {result}")
+        return Role(result)
 
     async def get_role_by_user_id(self, user_id: UUID) -> Role:
         stmt = (
@@ -70,9 +69,8 @@ class UserRoleGateway:
             .join_from(User, UserRole)
             .where(User.id == user_id)
         )
-        result = await self.session.execute(stmt)
-        rows = result.all()
-        if not rows:
+        result = await self.session.scalar(stmt)
+        if not result:
             raise UserRoleNotFoundError
-        logger.info(f"Result: {result}")
-        return Role(rows[0][0])
+        logger.debug(f"USER ROLE: {result}")
+        return Role(result)

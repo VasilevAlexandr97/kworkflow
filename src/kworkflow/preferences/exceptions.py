@@ -3,7 +3,9 @@ class UserCategoryFollowAlreadyExistsError(Exception):
 
 
 class UserCategoryFollowLimitExceededError(Exception):
-    pass
+    def __init__(self, limit: int):
+        self.limit = limit
+        super().__init__(f"Category follow limit exceeded: {limit}")
 
 
 class UserCategoryFollowCreationError(Exception):
