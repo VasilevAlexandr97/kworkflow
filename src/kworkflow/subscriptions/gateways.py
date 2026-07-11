@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta, date
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select

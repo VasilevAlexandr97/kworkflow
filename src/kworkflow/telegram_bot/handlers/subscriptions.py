@@ -9,10 +9,10 @@ from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.main.config import Config
 from kworkflow.subscriptions.exceptions import (
+    ActiveSubscriptionExistsError,
     PaymentEmailRequiredError,
     PaymentEmailValidationError,
     SubscriptionAlreadyCancelledError,
-    ActiveSubscriptionExistsError,
 )
 from kworkflow.subscriptions.models import PlanSlug
 from kworkflow.subscriptions.services import (
@@ -24,9 +24,9 @@ from kworkflow.telegram_bot.keyboards import (
     build_payment_email_kbd,
     build_payment_kbd,
     build_subscription_cancelled_kbd,
+    build_subscription_exists_kbd,
     build_subscription_manage_kbd,
     build_subscription_plan_kbd,
-    build_subscription_exists_kbd,
 )
 from kworkflow.telegram_bot.messages import (
     not_active_subscription_message,
@@ -36,8 +36,8 @@ from kworkflow.telegram_bot.messages import (
     pro_subscription_info_message,
     subscription_already_cancelled_message,
     subscription_cancelled_message,
-    subscription_info_message,
     subscription_exists_message,
+    subscription_info_message,
 )
 from kworkflow.telegram_bot.states import PaymentState
 

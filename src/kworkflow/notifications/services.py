@@ -18,9 +18,9 @@ from kworkflow.preferences.gateways import (
 from kworkflow.projects.exceptions import ProjectProposalNotFoundError
 from kworkflow.projects.gateway import ProjectGateway, ProjectProposalGateway
 from kworkflow.telegram_bot.keyboards import (
+    build_no_active_subscription_kbd,
     build_project_kbd,
     build_subscription_activated_kbd,
-    build_no_active_subscription_kbd,
 )
 from kworkflow.telegram_bot.messages import project_message
 from kworkflow.users.exceptions import UserNotFoundError
@@ -117,7 +117,7 @@ class ProjectProposalNotificationService:
 
     async def notify_generated(self, user_id: UUID, project_id: UUID):
         logger.info(
-            f"NOTIFY PROJECT PROPOSAL: user_id={user_id}, project_id: {project_id}"
+            f"NOTIFY PROJECT PROPOSAL: user_id={user_id}, project_id: {project_id}",
         )
         proposal = await self.proposal_gateway.get_with_user(
             user_id=user_id,

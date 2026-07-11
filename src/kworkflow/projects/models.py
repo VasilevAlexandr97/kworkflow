@@ -147,5 +147,6 @@ class ProjectProposal(Base):
     )
 
     user: Mapped["User"] = relationship(
-        back_populates="proposals", lazy="raise"
+        back_populates="proposals",
+        lazy="raise",
     )

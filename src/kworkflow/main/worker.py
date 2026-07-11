@@ -5,7 +5,7 @@ from dishka import make_async_container
 from dishka.integrations.taskiq import setup_dishka
 
 # TODO: Подумать как правильно импортировать scheduler
-from kworkflow.infra.taskiq.broker import broker, scheduler
+from kworkflow.infra.taskiq.broker import broker
 
 # from kworkflow.background_tasks.tasks import register_tasks
 from kworkflow.main.config import Config, get_config

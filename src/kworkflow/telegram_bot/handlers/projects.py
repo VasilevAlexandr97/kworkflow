@@ -15,10 +15,10 @@ from kworkflow.telegram_bot.keyboards import (
     build_profile_menu_kbd,
 )
 from kworkflow.telegram_bot.messages import (
+    already_generating_proposal_message,
+    generating_proposal_message,
     profile_not_set_message,
     project_proposal_generation_permission_error_message,
-    generating_proposal_message,
-    already_generating_proposal_message,
 )
 
 router = Router()

@@ -212,7 +212,10 @@ def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
 
 
 def payment_message(
-    payment_id: str, email: str, amount: Decimal, link: str
+    payment_id: str,
+    email: str,
+    amount: Decimal,
+    link: str,
 ) -> str:
     return (
         f"🛒 Платеж: <b>{payment_id}</b>\n\n"

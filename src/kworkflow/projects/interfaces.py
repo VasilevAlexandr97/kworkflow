@@ -7,4 +7,3 @@ class ProposalGenerationQueue(Protocol):
     @abstractmethod
     async def enqueue(self, user_id: UUID, project_id: UUID) -> None:
         raise NotImplementedError
-

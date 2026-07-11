@@ -27,6 +27,7 @@ from kworkflow.telegram_bot.keyboards import (
     build_stop_words_menu_kbd,
 )
 from kworkflow.telegram_bot.messages import (
+    categories_limit_exceeded_message,
     empty_stop_words_delete_message,
     profile_info_message,
     profile_not_set_message,
@@ -37,7 +38,6 @@ from kworkflow.telegram_bot.messages import (
     stop_words_limit_exceeded_message,
     stop_words_menu_message,
     unfollow_all_categories_message,
-    categories_limit_exceeded_message,
 )
 from kworkflow.telegram_bot.states import (
     FreelancerProfileState,
