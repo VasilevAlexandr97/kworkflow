@@ -199,6 +199,7 @@ class PaymentVerificationService:
         payment_client: YooKassaClient,
         subscription_plan_gateway: SubscriptionPlanGateway,
         subscription_gateway: SubscriptionGateway,
+        limit_resetter: SubscriptionLimitsResetter,
         transaction_manager: TransactionManager,
         notify_queue: SubscriptionActivatedNotificationQueue,
         redis_client: Redis,
@@ -207,6 +208,7 @@ class PaymentVerificationService:
         self.payment_client = payment_client
         self.subscription_plan_gateway = subscription_plan_gateway
         self.subscription_gateway = subscription_gateway
+        self.limit_resetter = limit_resetter
         self.transaction_manager = transaction_manager
         self.notify_queue = notify_queue
         self.redis_client = redis_client
@@ -300,6 +302,9 @@ class PaymentVerificationService:
                             )
                             await self.subscription_gateway.add(
                                 subscription,
+                            )
+                            await self.limit_resetter.reset_pro_generations(
+                                payment.user_id,
                             )
                             await self.transaction_manager.commit()
                             await self.notify_queue.enqueue(
@@ -463,6 +468,9 @@ class SubscriptionRenewalService:
             )
             await self.payment_gateway.add(new_payment)
             await self.subscription_gateway.add(new_subscription)
+            await self.limits_resetter.reset_pro_generations(
+                subscription.user_id,
+            )
             await self.transaction_manager.commit()
             await self.notify_queue.enqueue_renewed(
                 user_id=new_subscription.user_id,

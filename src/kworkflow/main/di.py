@@ -18,6 +18,7 @@ from kworkflow.auth.id_provider import (
     WorkerIdProvider,
 )
 from kworkflow.auth.telegram_auth import TelegramAuth
+from kworkflow.common.generation_limit_checker import GenerationLimitChecker
 from kworkflow.common.subscription_checker import SubscriptionChecker
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
@@ -56,6 +57,7 @@ from kworkflow.projects.gateway import (
     ProjectGateway,
     ProjectProposalGateway,
     ProjectProposalRequestGateway,
+    UserGenerationUsageGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import ProposalGenerationQueue
@@ -65,6 +67,7 @@ from kworkflow.projects.services import (
     ProjectProposalRequestService,
     ProjectSyncService,
 )
+from kworkflow.projects.usage_checker import GenerationLimitCheckerImpl
 from kworkflow.subscriptions.checker import (
     SubscriptionCheckerImpl,
 )
@@ -209,6 +212,10 @@ class ProjectProvider(Provider):
         ProjectProposalRequestGateway,
         scope=Scope.REQUEST,
     )
+    user_generation_usage_gateway = provide(
+        UserGenerationUsageGateway,
+        scope=Scope.REQUEST,
+    )
     project_proposal_generator = provide(
         ProjectProposalGenerator,
         scope=Scope.REQUEST,
@@ -220,6 +227,11 @@ class ProjectProvider(Provider):
     project_proposal_generation_service = provide(
         ProjectProposalGenerationService,
         scope=Scope.REQUEST,
+    )
+    limit_checker = provide(
+        GenerationLimitCheckerImpl,
+        scope=Scope.REQUEST,
+        provides=GenerationLimitChecker,
     )
     # TODO: подумать какой scope нужен для queue классов
     proposal_generation_queue = provide(

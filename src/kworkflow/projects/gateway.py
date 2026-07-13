@@ -12,6 +12,7 @@ from kworkflow.projects.models import (
     ProjectProposal,
     ProjectProposalRequest,
     ProjectProposalRequestStatus,
+    UserGenerationUsage,
 )
 
 
@@ -231,3 +232,44 @@ class ProjectProposalGateway:
             )
         )
         return await self.session.scalar(stmt)
+
+
+class UserGenerationUsageGateway:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    # async def add(self, usage: UserGenerationUsage):
+    #     self.session.add(usage)
+    #     await self.session.flush()
+
+    # async def get(self, user_id: UUID) -> UserGenerationUsage | None:
+    #     stmt = select(UserGenerationUsage).where(
+    #         UserGenerationUsage.user_id == user_id,
+    #     )
+    #     return await self.session.scalar(stmt)
+
+    async def get_or_create(self, user_id: UUID) -> UserGenerationUsage:
+        now = datetime.now(UTC)
+        stmt = (
+            pg_insert(UserGenerationUsage)
+            .values(
+                user_id=user_id,
+                free_generations=0,
+                pro_generations=0,
+                created_at=now,
+                updated_at=now,
+            )
+            .on_conflict_do_nothing(
+                index_elements=[UserGenerationUsage.user_id],
+            )
+            .returning(UserGenerationUsage)
+        )
+        result = await self.session.execute(stmt)
+        gen_usage = result.scalar_one_or_none()
+        if gen_usage is not None:
+            return gen_usage
+        stmt = select(UserGenerationUsage).where(
+            UserGenerationUsage.user_id == user_id,
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one()

@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
 from kworkflow.auth.id_provider import IdProvider
+from kworkflow.common.generation_limit_checker import GenerationLimitChecker
+from kworkflow.common.subscription_checker import SubscriptionChecker
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.notifications.interfaces import (
@@ -19,15 +21,16 @@ from kworkflow.projects.dto import (
     ProjectProposalGenerationRequestStatus,
 )
 from kworkflow.projects.exceptions import (
+    GenerationLimitExceededError,
     ProjectNotFoundError,
     ProjectProposalGenerationError,
-    ProjectProposalGenerationPermissionError,
 )
 from kworkflow.projects.gateway import (
     ProjectCategoryGateway,
     ProjectGateway,
     ProjectProposalGateway,
     ProjectProposalRequestGateway,
+    UserGenerationUsageGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import (
@@ -167,6 +170,8 @@ class ProjectProposalRequestService:
         project_proposal_gateway: ProjectProposalGateway,
         freelancer_profile_gateway: UserFreelancerProfileGateway,
         project_proposal_request_gateway: ProjectProposalRequestGateway,
+        subscription_checker: SubscriptionChecker,
+        limit_checker: GenerationLimitChecker,
         proposal_generation_queue: ProposalGenerationQueue,
         id_provider: IdProvider,
         transaction_manager: TransactionManager,
@@ -177,6 +182,8 @@ class ProjectProposalRequestService:
         self.project_proposal_request_gateway = (
             project_proposal_request_gateway
         )
+        self.subscription_checker = subscription_checker
+        self.limit_checker = limit_checker
         self.proposal_generation_queue = proposal_generation_queue
         self.id_provider = id_provider
         self.transaction_manager = transaction_manager
@@ -191,13 +198,6 @@ class ProjectProposalRequestService:
         если генерация уже запрошена, не ставит повторную задачу.
         """
         user_id = await self.id_provider.get_current_user_id()
-        user_role = await self.id_provider.get_role()
-        if user_role != Role.ADMIN:
-            logger.warning(
-                f"User {user_id} (role={user_role}) attempted to generate proposal "
-                f"for project {project_id} — access denied",
-            )
-            raise ProjectProposalGenerationPermissionError
         project = await self.project_gateway.get_by_id(project_id=project_id)
         if not project:
             raise ProjectNotFoundError
@@ -213,6 +213,11 @@ class ProjectProposalRequestService:
                 status=ProjectProposalGenerationRequestStatus.ALREADY_GENERATED,
                 generated_text=proposal.generated_text,
             )
+        can_generate = await self.limit_checker.can_generate(user_id)
+        if not can_generate:
+            is_pro_user = await self.subscription_checker.is_pro_user(user_id)
+            limit = await self.limit_checker.get_limit(user_id)
+            raise GenerationLimitExceededError(limit=limit, is_pro=is_pro_user)
         now = datetime.now(UTC)
         new_request = ProjectProposalRequest(
             user_id=user_id,
@@ -246,22 +251,26 @@ class ProjectProposalRequestService:
 class ProjectProposalGenerationService:
     def __init__(
         self,
-        user_role_gateway: UserRoleGateway,
         project_gateway: ProjectGateway,
         project_proposal_gateway: ProjectProposalGateway,
         project_proposal_request_gateway: ProjectProposalRequestGateway,
         freelancer_profile_gateway: UserFreelancerProfileGateway,
+        usage_gateway: UserGenerationUsageGateway,
+        limit_checker: GenerationLimitChecker,
+        subscription_checker: SubscriptionChecker,
         proposal_generator: ProjectProposalGenerator,
         transaction_manager: TransactionManager,
         notify_queue: ProposalGeneratedNotificationQueue,
     ):
-        self.user_role_gateway = user_role_gateway
         self.project_gateway = project_gateway
         self.project_proposal_gateway = project_proposal_gateway
         self.project_proposal_request_gateway = (
             project_proposal_request_gateway
         )
         self.freelancer_profile_gateway = freelancer_profile_gateway
+        self.usage_gateway = usage_gateway
+        self.limit_checker = limit_checker
+        self.subscription_checker = subscription_checker
         self.proposal_generator = proposal_generator
         self.transaction_manager = transaction_manager
         self.notify_queue = notify_queue
@@ -313,16 +322,6 @@ class ProjectProposalGenerationService:
             return None
 
         try:
-            user_role = await self.user_role_gateway.get_role_by_user_id(
-                user_id,
-            )
-            if user_role != Role.ADMIN:
-                logger.warning(
-                    f"User {user_id} (role={user_role}) attempted to generate proposal "
-                    f"for project {project_id} — access denied",
-                )
-                raise ProjectProposalGenerationPermissionError
-            logger.debug(f"USER_ID: {user_id}, USER_ROLE: {user_role}")
             freelancer_profile = await self.freelancer_profile_gateway.get(
                 user_id,
             )
@@ -353,6 +352,21 @@ class ProjectProposalGenerationService:
                 project_info=project_info,
             )
             logger.debug(f"RESULT GENERATION: {result}")
+            is_pro_user = await self.subscription_checker.is_pro_user(
+                user_id,
+            )
+            can_generate = await self.limit_checker.can_generate(user_id)
+            if not can_generate:
+                limit = await self.limit_checker.get_limit(user_id)
+                raise GenerationLimitExceededError(
+                    limit=limit,
+                    is_pro=is_pro_user,
+                )
+            usage = await self.usage_gateway.get_or_create(user_id)
+            if is_pro_user:
+                usage.increment_pro()
+            else:
+                usage.increment_free()
             project_proposal = ProjectProposal(
                 project_id=project_id,
                 user_id=user_id,
@@ -377,7 +391,6 @@ class ProjectProposalGenerationService:
             )
         except ProjectProposalGenerationError as exc:
             logger.info(f"Project info: {project_info}")
-            logger.info(f"Freelancer info: {freelancer_profile.about}")
             logger.info("Project proposal generation error")
             error_text = str(exc) or traceback.format_exc()
             await self._fail_request(

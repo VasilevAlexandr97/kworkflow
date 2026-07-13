@@ -3,11 +3,11 @@ from typing import Protocol
 from uuid import UUID
 
 
-class SubscriptionLimitsResetter(Protocol):
+class GenerationLimitChecker(Protocol):
     @abstractmethod
-    async def reset_pro_generations(self, user_id: UUID):
+    async def can_generate(self, user_id: UUID) -> bool:
         raise NotImplementedError
 
     @abstractmethod
-    async def reset_limits(self, user_id: UUID) -> None:
+    async def get_limit(self, user_id: UUID) -> int:
         raise NotImplementedError
