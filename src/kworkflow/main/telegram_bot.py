@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
@@ -6,6 +7,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from dishka import make_async_container
 from dishka.integrations.aiogram import AiogramProvider, setup_dishka
+from redis.asyncio.client import Redis
 
 from kworkflow.main.config import Config, config
 from kworkflow.main.di import (
@@ -25,6 +27,7 @@ from kworkflow.telegram_bot.handlers.projects import router as projects_router
 from kworkflow.telegram_bot.handlers.subscriptions import (
     router as subscriptions_router,
 )
+from kworkflow.telegram_bot.middlewares.antiflood import AntiFloodMiddleware
 
 bot = Bot(
     token=config.telegram_bot.token,
@@ -46,6 +49,12 @@ container = make_async_container(
 )
 
 
+def setup_middlewares(dp: Dispatcher, redis: Redis):
+    antiflood_middleware = AntiFloodMiddleware(redis)
+    dp.message.middleware(antiflood_middleware)
+    dp.callback_query.middleware(antiflood_middleware)
+
+
 def setup_handlers(dp: Dispatcher):
     dp.include_router(default_router)
     dp.include_router(preferences_router)
@@ -53,15 +62,17 @@ def setup_handlers(dp: Dispatcher):
     dp.include_router(subscriptions_router)
 
 
-def get_dispatcher() -> Dispatcher:
+async def get_dispatcher() -> Dispatcher:
     logging.basicConfig(level=logging.DEBUG if config.debug else logging.INFO)
-    storage = RedisStorage.from_url(config.redis.connection_url)
+    redis = await container.get(Redis)
+    storage = RedisStorage(redis=redis)
     dp = Dispatcher(storage=storage)
+    setup_middlewares(dp, redis)
     setup_handlers(dp)
     setup_dishka(container, dp)
     return dp
 
 
 def run_polling():
-    dp = get_dispatcher()
+    dp = asyncio.run(get_dispatcher())
     dp.run_polling(bot)

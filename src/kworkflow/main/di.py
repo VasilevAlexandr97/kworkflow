@@ -139,7 +139,7 @@ class InfraProvider(Provider):
     ) -> AsyncIterable[Redis]:
         client = Redis(connection_pool=pool)
         yield client
-        await client.close()
+        await client.aclose(close_connection_pool=True)
 
     @provide(scope=Scope.APP)
     def get_kwork_client(self, config: Config) -> KworkClient:

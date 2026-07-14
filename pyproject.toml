@@ -9,6 +9,7 @@ dependencies = [
     "aiolimiter>=1.2.1",
     "alembic>=1.18.4",
     "asyncpg>=0.31.0",
+    "cachetools>=7.1.4",
     "dishka>=1.10.1",
     "httpx>=0.28.1",
     "kwork>=0.2.0",
@@ -17,6 +18,7 @@ dependencies = [
     "redis[hiredis]>=7.4.0",
     "sqlalchemy>=2.0.51",
     "taskiq-redis>=1.2.3",
+    "uvloop>=0.22.1",
 ]
 
 [dependency-groups]
