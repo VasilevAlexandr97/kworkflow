@@ -1,4 +1,3 @@
-from kworkflow.projects.consts import MAX_PRO_GENERATIONS, MAX_FREE_GENERATIONS
 from datetime import datetime
 from decimal import Decimal
 
@@ -7,8 +6,9 @@ from kworkflow.preferences.consts import (
     MAX_FREE_STOP_WORDS,
     MAX_PRO_STOP_WORDS,
 )
+from kworkflow.projects.consts import MAX_FREE_GENERATIONS, MAX_PRO_GENERATIONS
 from kworkflow.projects.models import Project, ProjectCategory
-from kworkflow.subscriptions.dto import SubscriptionInfo
+from kworkflow.subscriptions.dto import SubscriptionInfoDTO
 from kworkflow.subscriptions.models import PlanSlug
 
 
@@ -186,7 +186,12 @@ def generation_limit_exceeded_message(limit: int, is_pro: bool) -> str:
     )
 
 
-def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
+def pro_subscription_info_message(
+    plan_slug: PlanSlug,
+    price: Decimal,
+    monthly_price: Decimal,
+    duration_days: int,
+) -> str:
     text = (
         "👑 PRO подписка\n\n"
         "Открой полный доступ к возможностям бота:\n\n"
@@ -209,8 +214,8 @@ def pro_subscription_info_message(plan_slug: PlanSlug) -> str:
     )
     if plan_slug == PlanSlug.PRO_INITIAL:
         text += (
-            "🎁 Попробуй PRO всего за 1₽ на 3 дня, "
-            "далее — 499₽/мес. Отменить можно в любой момент."
+            f"🎁 Попробуй PRO всего за {price:.0f}₽ на {duration_days} дня, "
+            f"далее — {monthly_price:.0f}₽/мес. Отменить можно в любой момент."
         )
     else:
         text += (
@@ -255,12 +260,12 @@ def not_active_subscription_message() -> str:
         "Оформите подписку, чтобы продолжить пользоваться:\n\n"
         "• 📂 Любое количество категорий\n"
         "• 🔔 Мгновенные уведомления\n"
-        "• 🤖 100 генераций откликов\n"
+        f"• 🤖 {MAX_PRO_GENERATIONS} генераций откликов\n"
         "• ⚡️ Экономия времени"
     )
 
 
-def subscription_info_message(info: SubscriptionInfo):
+def subscription_info_message(info: SubscriptionInfoDTO):
     status = "✅ Активна"
     if info.is_cancelled:
         status = "⏳ Отменена"

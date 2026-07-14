@@ -81,16 +81,6 @@ def upgrade() -> None:
         [
             {
                 "id": uuid7(), 
-                "name": "Free",
-                "slug": PlanSlug.FREE,
-                "price_rub": 0, 
-                "duration_days": None, 
-                "is_active": True, 
-                "created_at": now, 
-                "updated_at": now
-            },
-            {
-                "id": uuid7(), 
                 "name": "PRO 3 Days", 
                 "slug": PlanSlug.PRO_INITIAL,
                 "price_rub": 1, 

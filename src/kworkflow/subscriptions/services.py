@@ -27,7 +27,7 @@ from kworkflow.notifications.interfaces import (
     SubscriptionActivatedNotificationQueue,
     SubscriptionRenewalNotificationQueue,
 )
-from kworkflow.subscriptions.dto import SubscriptionInfo
+from kworkflow.subscriptions.dto import SubscriptionInfoDTO, PlanForUserDTO
 from kworkflow.subscriptions.exceptions import (
     ActiveSubscriptionExistsError,
     PaymentEmailNotFoundError,
@@ -99,12 +99,26 @@ class SubscriptionPaymentService:
             raise SubscriptionPlanNotFoundError
         return plan
 
-    async def get_plan_for_user(self) -> SubscriptionPlan:
+    async def get_plan_for_user(self) -> PlanForUserDTO:
         user_id = await self.id_provider.get_current_user_id()
         is_active = await self.subscription_gateway.has_active(user_id)
         if is_active:
             raise ActiveSubscriptionExistsError
-        return await self._get_initial_or_monthly_plan(user_id)
+        plan = await self._get_initial_or_monthly_plan(user_id)
+        monthly_price = plan.price_rub
+        if plan.slug == PlanSlug.PRO_INITIAL:
+            pro_plan = await self.subscription_plan_gateway.get_by_slug(
+                PlanSlug.PRO_MONTHLY,
+            )
+            if not pro_plan:
+                raise SubscriptionPlanNotFoundError
+            monthly_price = pro_plan.price_rub
+        return PlanForUserDTO(
+            slug=PlanSlug(plan.slug),
+            price=plan.price_rub,
+            monthly_price=monthly_price,
+            duration_days=plan.duration_days,
+        )
 
     async def get_or_create_pending_payment(
         self,
@@ -340,7 +354,7 @@ class SubscriptionManagementService:
         self.id_provider = id_provider
         self.transaction_manager = transaction_manager
 
-    async def get_active_subscription_info(self) -> SubscriptionInfo | None:
+    async def get_active_subscription_info(self) -> SubscriptionInfoDTO | None:
         user_id = await self.id_provider.get_current_user_id()
         subscription = await self.subscription_gateway.get_latest_active(
             user_id,
@@ -352,7 +366,7 @@ class SubscriptionManagementService:
         if subscription.cancelled_at:
             is_cancelled = True
         days_left = (subscription.expires_at - datetime.now(UTC)).days
-        return SubscriptionInfo(
+        return SubscriptionInfoDTO(
             plan_name=subscription.plan.name,
             plan_slug=PlanSlug(subscription.plan.slug),
             is_cancelled=is_cancelled,
