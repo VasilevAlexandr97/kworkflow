@@ -289,3 +289,7 @@ def subscription_cancelled_message(expires_at: datetime) -> str:
 
 def subscription_already_cancelled_message() -> str:
     return "❌ Подписка уже была отменена ранее."
+
+
+def antiflood_message() -> str:
+    return "✋ Слишком частые запросы"

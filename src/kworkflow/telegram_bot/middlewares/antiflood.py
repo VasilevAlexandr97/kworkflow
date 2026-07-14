@@ -1,3 +1,4 @@
+from kworkflow.telegram_bot.messages import antiflood_message
 import logging
 
 from collections.abc import Awaitable, Callable
@@ -59,6 +60,6 @@ class AntiFloodMiddleware(BaseMiddleware):
                 f"event_data={event_data}",
             )
             if isinstance(event, CallbackQuery):
-                await event.answer("Слишком быстро")
+                await event.answer(antiflood_message())
             return None
         return await handler(event, data)
