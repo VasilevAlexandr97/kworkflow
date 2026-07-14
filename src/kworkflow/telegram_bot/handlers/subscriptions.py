@@ -80,11 +80,7 @@ async def create_payment(
     call: types.CallbackQuery,
     service: FromDishka[SubscriptionPaymentService],
     state: FSMContext,
-    config: FromDishka[Config],
 ):
-    if not config.debug:
-        await call.answer()
-        return
     try:
         payment = await service.get_or_create_pending_payment()
         text = payment_message(
