@@ -152,10 +152,15 @@ class Payment(Base):
         self.paid_at = dt
         self.updated_at = dt
 
-    def mark_canceled(self, dt: datetime | None = None) -> None:
+    def mark_canceled(
+        self,
+        error: str | None = None,
+        dt: datetime | None = None,
+    ) -> None:
         if dt is None:
             dt = datetime.now(UTC)
         self.status = PaymentStatus.CANCELED
+        self.error = error
         self.updated_at = dt
 
     def __repr__(self) -> str:

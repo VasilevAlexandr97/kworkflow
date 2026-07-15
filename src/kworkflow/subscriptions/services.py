@@ -153,7 +153,12 @@ class SubscriptionPaymentService:
                     if yookassa_payment.status == Status.SUCCEEDED:
                         raise PaymentAlreadyPaidError
                     if yookassa_payment.status == Status.CANCELED:
-                        existing.mark_canceled(now)
+                        error = (
+                            yookassa_payment.cancellation_details.reason
+                            if yookassa_payment.cancellation_details
+                            else None
+                        )
+                        existing.mark_canceled(error=error, dt=now)
                 plan = await self._get_initial_or_monthly_plan(user_id)
                 payment_request = PaymentRequest(
                     amount=AmountData(
@@ -300,7 +305,7 @@ class PaymentVerificationService:
                                     "not found in DB — skipping",
                                 )
                                 continue
-                            payment.mark_succeeded(pm.id)
+                            payment.mark_succeeded(pm.id, dt=now)
                             expires_at = (
                                 now + timedelta(days=plan.duration_days)
                             ).replace(
@@ -337,9 +342,7 @@ class PaymentVerificationService:
                                 if yookassa_payment.cancellation_details
                                 else None
                             )
-                            payment.status = PaymentStatus.CANCELED
-                            payment.error = error
-                            payment.updated_at = now
+                            payment.mark_canceled(error=error, dt=now)
                             await self.transaction_manager.commit()
                     except Exception:
                         logger.exception("VERIFY PAYMENT ERROR")
