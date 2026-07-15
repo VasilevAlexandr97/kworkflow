@@ -298,3 +298,7 @@ def subscription_already_cancelled_message() -> str:
 
 def antiflood_message() -> str:
     return "✋ Слишком частые запросы"
+
+
+def try_again_later_message() -> str:
+    return "⚠️ Попробуйте позже"

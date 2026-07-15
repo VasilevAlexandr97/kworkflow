@@ -28,3 +28,7 @@ class PaymentEmailValidationError(Exception):
 
 class PaymentMethodNotFoundError(Exception):
     pass
+
+
+class PaymentAlreadyPaidError(Exception):
+    pass

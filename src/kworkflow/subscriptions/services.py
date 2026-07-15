@@ -36,6 +36,7 @@ from kworkflow.subscriptions.exceptions import (
     ServiceTemporarilyUnavailableError,
     SubscriptionAlreadyCancelledError,
     SubscriptionPlanNotFoundError,
+    PaymentAlreadyPaidError,
 )
 from kworkflow.subscriptions.gateways import (
     PaymentGateway,
@@ -142,12 +143,17 @@ class SubscriptionPaymentService:
                     user_id,
                 )
                 now = datetime.now(UTC)
-                payment_link_ttl = timedelta(seconds=300)
-                if existing and existing.created_at > now - payment_link_ttl:
-                    return existing
 
                 if existing:
-                    existing.status = PaymentStatus.EXPIRED
+                    yookassa_payment = await self.payment_client.get_payment(
+                        existing.yookassa_payment_id,
+                    )
+                    if yookassa_payment.status == Status.PENDING:
+                        return existing
+                    if yookassa_payment.status == Status.SUCCEEDED:
+                        raise PaymentAlreadyPaidError
+                    if yookassa_payment.status == Status.CANCELED:
+                        existing.mark_canceled(now)
                 plan = await self._get_initial_or_monthly_plan(user_id)
                 payment_request = PaymentRequest(
                     amount=AmountData(

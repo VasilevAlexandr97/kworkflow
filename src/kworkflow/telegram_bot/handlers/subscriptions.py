@@ -9,6 +9,7 @@ from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.subscriptions.exceptions import (
     ActiveSubscriptionExistsError,
+    PaymentAlreadyPaidError,
     PaymentEmailRequiredError,
     PaymentEmailValidationError,
     SubscriptionAlreadyCancelledError,
@@ -25,6 +26,7 @@ from kworkflow.telegram_bot.keyboards import (
     build_subscription_exists_kbd,
     build_subscription_manage_kbd,
     build_subscription_plan_kbd,
+    build_try_again_later_kbd,
 )
 from kworkflow.telegram_bot.messages import (
     not_active_subscription_message,
@@ -36,6 +38,7 @@ from kworkflow.telegram_bot.messages import (
     subscription_cancelled_message,
     subscription_exists_message,
     subscription_info_message,
+    try_again_later_message,
 )
 from kworkflow.telegram_bot.states import PaymentState
 
@@ -95,6 +98,9 @@ async def create_payment(
     except ActiveSubscriptionExistsError:
         text = subscription_exists_message()
         keyboard = build_subscription_exists_kbd()
+    except PaymentAlreadyPaidError:
+        text = try_again_later_message()
+        keyboard = build_try_again_later_kbd()
     with contextlib.suppress(TelegramBadRequest):
         await call.message.edit_text(text, reply_markup=keyboard)
 
@@ -124,6 +130,9 @@ async def set_payment_email(
     except ActiveSubscriptionExistsError:
         text = subscription_exists_message()
         keyboard = build_subscription_exists_kbd()
+    except PaymentAlreadyPaidError:
+        text = try_again_later_message()
+        keyboard = build_try_again_later_kbd()
     await message.answer(text, reply_markup=keyboard)
     if state_clear:
         await state.clear()

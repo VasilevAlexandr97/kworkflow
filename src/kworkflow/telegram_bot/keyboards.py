@@ -360,3 +360,14 @@ def build_subscription_cancelled_kbd():
         ),
     )
     return builder.as_markup()
+
+
+def build_try_again_later_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()

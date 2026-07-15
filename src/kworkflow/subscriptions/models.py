@@ -101,7 +101,6 @@ class Subscription(Base):
 class PaymentStatus(StrEnum):
     PENDING = "pending"
     SUCCEEDED = "succeeded"
-    EXPIRED = "expired"
     CANCELED = "canceled"
     FAILED = "failed"
 
@@ -136,17 +135,28 @@ class Payment(Base):
         nullable=False,
     )
 
-    def mark_succeeded(self, payment_method_id: str) -> None:
+    def mark_succeeded(
+        self,
+        payment_method_id: str,
+        dt: datetime | None = None,
+    ) -> None:
         if not payment_method_id:
             raise ValueError(
                 "payment_method_id is required — subscription payments "
                 "always have a saved payment method",
             )
-        now = datetime.now(UTC)
+        if dt is None:
+            dt = datetime.now(UTC)
         self.yookassa_payment_method_id = payment_method_id
         self.status = PaymentStatus.SUCCEEDED
-        self.paid_at = now
-        self.updated_at = now
+        self.paid_at = dt
+        self.updated_at = dt
+
+    def mark_canceled(self, dt: datetime | None = None) -> None:
+        if dt is None:
+            dt = datetime.now(UTC)
+        self.status = PaymentStatus.CANCELED
+        self.updated_at = dt
 
     def __repr__(self) -> str:
         return (

@@ -137,7 +137,7 @@ class PaymentGateway:
 
     async def get_recent_unpaid_payments(self) -> list[Payment]:
         stmt = select(Payment).where(
-            Payment.status.in_([PaymentStatus.PENDING, PaymentStatus.EXPIRED]),
+            Payment.status == PaymentStatus.PENDING,
             Payment.paid_at.is_(None),
             Payment.created_at > datetime.now(UTC) - timedelta(hours=24),
         )

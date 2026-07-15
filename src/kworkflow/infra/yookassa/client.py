@@ -12,10 +12,6 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class EventType(StrEnum):
-    SUCCEEDED = "payment.succeeded"
-
-
 class Currency(StrEnum):
     RUB = "RUB"
 
