@@ -7,14 +7,12 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
-from kworkflow.main.config import Config
 from kworkflow.subscriptions.exceptions import (
     ActiveSubscriptionExistsError,
     PaymentEmailRequiredError,
     PaymentEmailValidationError,
     SubscriptionAlreadyCancelledError,
 )
-from kworkflow.subscriptions.models import PlanSlug
 from kworkflow.subscriptions.services import (
     SubscriptionManagementService,
     SubscriptionPaymentService,
@@ -80,11 +78,7 @@ async def create_payment(
     call: types.CallbackQuery,
     service: FromDishka[SubscriptionPaymentService],
     state: FSMContext,
-    config: FromDishka[Config],
 ):
-    if not config.debug:
-        await call.answer()
-        return
     try:
         payment = await service.get_or_create_pending_payment()
         text = payment_message(
