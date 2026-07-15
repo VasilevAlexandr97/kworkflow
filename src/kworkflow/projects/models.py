@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
@@ -70,6 +70,9 @@ class Project(Base):
 
     category: Mapped[ProjectCategory] = relationship(
         back_populates="projects",
+    )
+    proposals: Mapped[list["ProjectProposal"]] = relationship(
+        back_populates="project",
     )
 
     def __repr__(self):
@@ -147,6 +150,10 @@ class ProjectProposal(Base):
     )
 
     user: Mapped["User"] = relationship(
+        back_populates="proposals",
+        lazy="raise",
+    )
+    project: Mapped["Project"] = relationship(
         back_populates="proposals",
         lazy="raise",
     )

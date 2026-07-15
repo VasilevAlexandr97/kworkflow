@@ -1,8 +1,15 @@
 from collections.abc import AsyncIterable
+from typing import Any
 
 from aiogram import Bot
 from aiogram.types import TelegramObject
-from dishka import Provider, Scope, provide
+from dishka import (
+    AsyncContainer,
+    Provider,
+    Scope,
+    make_async_container,
+    provide,
+)
 from openai import AsyncOpenAI
 from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
@@ -13,6 +20,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from kworkflow.auth.id_provider import (
+    AdminPanelIdProvider,
     IdProvider,
     TelegramIdProvider,
     WorkerIdProvider,
@@ -365,3 +373,25 @@ class WorkerProvider(Provider):
     @provide(scope=Scope.REQUEST, provides=IdProvider)
     def get_id_provider(self) -> WorkerIdProvider:
         return WorkerIdProvider()
+
+
+class AdminPanelProvider(Provider):
+    @provide(scope=Scope.REQUEST, provides=IdProvider)
+    def get_id_provider(self) -> AdminPanelIdProvider:
+        return AdminPanelIdProvider()
+
+
+def create_container(
+    providers: list[Provider],
+    context: dict[Any, Any] | None = None,
+) -> AsyncContainer:
+    return make_async_container(
+        InfraProvider(),
+        UserProvider(),
+        ProjectProvider(),
+        PreferenceProvider(),
+        NotificationProvider(),
+        SubscriptionProvider(),
+        *providers,
+        context=context,
+    )

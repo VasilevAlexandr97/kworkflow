@@ -5,20 +5,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-from dishka import make_async_container
 from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 from redis.asyncio.client import Redis
 
 from kworkflow.main.config import Config, config
-from kworkflow.main.di import (
-    InfraProvider,
-    NotificationProvider,
-    PreferenceProvider,
-    ProjectProvider,
-    SubscriptionProvider,
-    TelegramBotProvider,
-    UserProvider,
-)
+from kworkflow.main.di import TelegramBotProvider, create_container
 from kworkflow.telegram_bot.handlers.default import router as default_router
 from kworkflow.telegram_bot.handlers.preferences import (
     router as preferences_router,
@@ -36,15 +27,9 @@ bot = Bot(
         link_preview_is_disabled=True,
     ),
 )
-container = make_async_container(
-    InfraProvider(),
-    UserProvider(),
-    ProjectProvider(),
-    PreferenceProvider(),
-    NotificationProvider(),
-    SubscriptionProvider(),
-    AiogramProvider(),
-    TelegramBotProvider(),
+
+container = create_container(
+    providers=[AiogramProvider(), TelegramBotProvider()],
     context={Config: config, Bot: bot},
 )
 

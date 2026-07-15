@@ -55,3 +55,14 @@ class WorkerIdProvider(IdProvider):
 
     async def get_role(self) -> Role:
         return Role.USER
+
+
+class AdminPanelIdProvider(IdProvider):
+    async def get_current_user_telegram_id(self) -> int:
+        return 0
+
+    async def get_current_user_id(self) -> UUID:
+        return UUID("00000000-0000-0000-0000-000000000000")
+
+    async def get_role(self) -> Role:
+        return Role.USER

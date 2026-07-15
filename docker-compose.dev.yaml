@@ -45,12 +45,28 @@ services:
   migrations:
     <<: *app-build
     container_name: kworkflow_migrations
-    volumes:
-      - ./src:/app/src
-    command: uv run alembic upgrade head
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ./src:/app/src
+    command: uv run alembic upgrade head
+
+  admin_panel:
+    <<: *app-build
+    container_name: kworkflow_admin_panel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    ports:
+      - 8000:8000
+    volumes:
+      - ./src:/app/src
+    command: uv run uvicorn --factory kworkflow.main.admin_panel:create_app --host 0.0.0.0 --port 8000 --reload --reload-dir src/
 
   telegram_bot:
     <<: *app-build
