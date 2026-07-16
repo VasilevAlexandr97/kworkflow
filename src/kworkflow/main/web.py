@@ -3,6 +3,7 @@ import logging
 from aiogram import Bot
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from kworkflow.main.config import Config, get_config
 from kworkflow.main.di import WebProvider, create_container
@@ -26,6 +27,11 @@ def create_app():
         context={Config: config, Bot: bot},
     )
     app = FastAPI(debug=config.debug)
+    app.mount(
+        "/static",
+        StaticFiles(directory=config.web.static_dir),
+        name="static",
+    )
     setup_routers(app)
     setup_dishka(container, app)
     return app
