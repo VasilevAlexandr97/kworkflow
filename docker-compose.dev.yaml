@@ -82,7 +82,7 @@ services:
       - 8001:8001
     volumes:
       - ./src:/app/src
-    command: uv run uvicorn --factory kworkflow.main.web:create_app --host 0.0.0.0 --port 8001 --reload --reload-dir src/
+    command: uv run uvicorn --factory kworkflow.main.web:create_app --host 0.0.0.0 --port 8001 --proxy-headers --forwarded-allow-ips='*' --reload --reload-dir src/
 
   telegram_bot:
     <<: *app-build
