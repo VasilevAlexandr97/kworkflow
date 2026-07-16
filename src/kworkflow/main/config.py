@@ -1,8 +1,9 @@
 import os
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
-# PROJECT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+PROJECT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,14 @@ class YookassaConfig:
 
 
 @dataclass(frozen=True)
+class WebConfig:
+    templates_dir: Path = (
+        PROJECT_DIR / "src" / "kworkflow" / "web" / "templates"
+    )
+    static_dir: Path = PROJECT_DIR / "src" / "kworkflow" / "web" / "static"
+
+
+@dataclass(frozen=True)
 class Config:
     postgres: PostgresConfig
     redis: RedisConfig
@@ -67,6 +76,7 @@ class Config:
     kwork: KworkConfig
     polza: PolzaConfig
     yookassa: YookassaConfig
+    web: WebConfig
     # project_dir: Path = PROJECT_DIR
     debug: bool = field(default=False)
 
@@ -112,6 +122,7 @@ def get_config() -> Config:
             shop_id=get_required_env("YOOKASSA_SHOP_ID"),
             secret_key=get_required_env("YOOKASSA_SECRET_KEY"),
         ),
+        web=WebConfig(),
     )
 
 

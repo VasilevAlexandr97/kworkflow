@@ -68,6 +68,22 @@ services:
       - ./src:/app/src
     command: uv run uvicorn --factory kworkflow.main.admin_panel:create_app --host 0.0.0.0 --port 8000 --reload --reload-dir src/
 
+  web:
+    <<: *app-build
+    container_name: kworkflow_web
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    ports:
+      - 8001:8001
+    volumes:
+      - ./src:/app/src
+    command: uv run uvicorn --factory kworkflow.main.web:create_app --host 0.0.0.0 --port 8001 --reload --reload-dir src/
+
   telegram_bot:
     <<: *app-build
     container_name: kworkflow_telegram_bot

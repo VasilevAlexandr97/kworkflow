@@ -10,6 +10,7 @@ from dishka import (
     make_async_container,
     provide,
 )
+from fastapi.templating import Jinja2Templates
 from openai import AsyncOpenAI
 from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
@@ -23,6 +24,7 @@ from kworkflow.auth.id_provider import (
     AdminPanelIdProvider,
     IdProvider,
     TelegramIdProvider,
+    WebIdProvider,
     WorkerIdProvider,
 )
 from kworkflow.auth.telegram_auth import TelegramAuth
@@ -379,6 +381,16 @@ class AdminPanelProvider(Provider):
     @provide(scope=Scope.REQUEST, provides=IdProvider)
     def get_id_provider(self) -> AdminPanelIdProvider:
         return AdminPanelIdProvider()
+
+
+class WebProvider(Provider):
+    @provide(scope=Scope.REQUEST, provides=IdProvider)
+    def get_id_provider(self) -> WebIdProvider:
+        return WebIdProvider()
+
+    @provide(scope=Scope.APP)
+    def get_templates(self, config: Config) -> Jinja2Templates:
+        return Jinja2Templates(directory=config.web.templates_dir)
 
 
 def create_container(
