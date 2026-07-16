@@ -7,10 +7,14 @@ from fastapi import FastAPI
 from kworkflow.main.config import Config, get_config
 from kworkflow.main.di import WebProvider, create_container
 from kworkflow.web.routers.index import router as index_router
+from kworkflow.web.routers.robots import router as robots_router
+from kworkflow.web.routers.sitemap import router as sitemap_router
 
 
 def setup_routers(app: FastAPI):
     app.include_router(index_router)
+    app.include_router(robots_router)
+    app.include_router(sitemap_router)
 
 
 def create_app():
