@@ -9,8 +9,11 @@ from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette_admin.contrib.sqla import Admin
 
-from kworkflow.admin_panel.projects import ProjectProposalView, ProjectView
-from kworkflow.admin_panel.users import UserView
+from kworkflow.admin_panel.views.projects import (
+    ProjectProposalView,
+    ProjectView,
+)
+from kworkflow.admin_panel.views.users import UserView
 from kworkflow.main.config import Config, get_config
 from kworkflow.main.di import AdminPanelProvider, create_container
 from kworkflow.projects.models import Project, ProjectProposal
