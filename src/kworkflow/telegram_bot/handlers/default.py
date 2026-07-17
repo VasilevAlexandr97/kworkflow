@@ -38,7 +38,10 @@ async def start_handler(
     else:
         categories = await service.get_followed_categories()
         text = menu_message(categories)
-        keyboard = build_main_menu_kbd(is_pro=result.is_pro or result.is_admin)
+        keyboard = build_main_menu_kbd(
+            is_pro=result.is_pro,
+            is_admin=result.is_admin,
+        )
     await message.answer(
         text,
         reply_markup=keyboard,
@@ -56,7 +59,10 @@ async def main_menu_command_handler(
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
-    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
+    keyboard = build_main_menu_kbd(
+        is_pro=current_user.is_pro,
+        is_admin=current_user.is_admin,
+    )
     await message.answer(text, reply_markup=keyboard)
     await state.clear()
 
@@ -72,7 +78,10 @@ async def main_menu_cb_handler(
 ):
     categories = await service.get_followed_categories()
     text = menu_message(categories)
-    keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
+    keyboard = build_main_menu_kbd(
+        is_pro=current_user.is_pro,
+        is_admin=current_user.is_admin,
+    )
     if callback_data.delete_message:
         await call.message.delete()
     await call.message.answer(text, reply_markup=keyboard)

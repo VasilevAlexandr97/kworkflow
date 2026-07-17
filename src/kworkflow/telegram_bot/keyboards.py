@@ -45,7 +45,7 @@ def build_start_kbd() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def build_main_menu_kbd(is_pro: bool = False):
+def build_main_menu_kbd(is_pro: bool = False, is_admin: bool = False):
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -65,20 +65,21 @@ def build_main_menu_kbd(is_pro: bool = False):
             callback_data="stop_words_menu",
         ),
     )
-    if is_pro:
-        builder.row(
-            InlineKeyboardButton(
-                text="👑 Управление подпиской",
-                callback_data="manage_subscription",
-            ),
-        )
-    else:
-        builder.row(
-            InlineKeyboardButton(
-                text="👑 PRO подписка",
-                callback_data="pro_subscription",
-            ),
-        )
+    if not is_admin:
+        if is_pro:
+            builder.row(
+                InlineKeyboardButton(
+                    text="👑 Управление подпиской",
+                    callback_data="manage_subscription",
+                ),
+            )
+        else:
+            builder.row(
+                InlineKeyboardButton(
+                    text="👑 PRO подписка",
+                    callback_data="pro_subscription",
+                ),
+            )
     return builder.as_markup()
 
 
