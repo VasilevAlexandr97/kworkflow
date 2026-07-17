@@ -4,7 +4,9 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from kworkflow.auth.id_provider import IdProvider
-from kworkflow.common.subscription_checker import SubscriptionChecker
+from kworkflow.common.interfaces.subscription_checker import (
+    SubscriptionChecker,
+)
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.preferences.consts import (
     MAX_FREE_CATEGORIES,

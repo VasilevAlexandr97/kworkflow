@@ -38,6 +38,13 @@ class UserGateway:
         stmt = select(User).where(User.id == user_id)
         return await self.session.scalar(stmt)
 
+    async def get_user_id_by_telegram_id(
+        self,
+        telegram_id: int,
+    ) -> UUID | None:
+        stmt = select(User.id).where(User.telegram_id == telegram_id)
+        return await self.session.scalar(stmt)
+
 
 class UserRoleGateway:
     def __init__(self, session: AsyncSession):
@@ -60,7 +67,6 @@ class UserRoleGateway:
         result = await self.session.scalar(stmt)
         if not result:
             raise UserRoleNotFoundError
-        logger.debug(f"USER ROLE: {result}")
         return Role(result)
 
     async def get_role_by_user_id(self, user_id: UUID) -> Role:
@@ -72,5 +78,4 @@ class UserRoleGateway:
         result = await self.session.scalar(stmt)
         if not result:
             raise UserRoleNotFoundError
-        logger.debug(f"USER ROLE: {result}")
         return Role(result)

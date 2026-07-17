@@ -1,7 +1,11 @@
 from uuid import UUID
 
-from kworkflow.common.generation_limit_checker import GenerationLimitChecker
-from kworkflow.common.subscription_checker import SubscriptionChecker
+from kworkflow.common.interfaces.generation_limit_checker import (
+    GenerationLimitChecker,
+)
+from kworkflow.common.interfaces.subscription_checker import (
+    SubscriptionChecker,
+)
 from kworkflow.projects.consts import MAX_FREE_GENERATIONS, MAX_PRO_GENERATIONS
 from kworkflow.projects.gateway import UserGenerationUsageGateway
 from kworkflow.users.gateways import UserRoleGateway

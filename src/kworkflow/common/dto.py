@@ -6,3 +6,4 @@ from uuid import UUID
 class CurrentUser:
     id: UUID
     is_pro: bool
+    is_admin: bool

@@ -1,6 +1,8 @@
 from uuid import UUID
 
-from kworkflow.common.subscription_checker import SubscriptionChecker
+from kworkflow.common.interfaces.subscription_checker import (
+    SubscriptionChecker,
+)
 from kworkflow.subscriptions.gateways import SubscriptionGateway
 from kworkflow.users.gateways import UserRoleGateway
 from kworkflow.users.models import Role

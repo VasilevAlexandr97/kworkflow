@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.auth.telegram_auth import TelegramAuth
+from kworkflow.common.dto import CurrentUser
 from kworkflow.preferences.services import UserCategoryFollowService
 from kworkflow.telegram_bot.keyboards import (
     MainMenuCB,
@@ -12,7 +13,6 @@ from kworkflow.telegram_bot.keyboards import (
     build_start_kbd,
 )
 from kworkflow.telegram_bot.messages import menu_message, start_message
-from kworkflow.users.dto import CurrentUser
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -27,7 +27,6 @@ async def start_handler(
     message: types.Message,
     auth: FromDishka[TelegramAuth],
     service: FromDishka[UserCategoryFollowService],
-    current_user: FromDishka[CurrentUser],
     state: FSMContext,
 ):
     if message.from_user is None:
@@ -39,7 +38,7 @@ async def start_handler(
     else:
         categories = await service.get_followed_categories()
         text = menu_message(categories)
-        keyboard = build_main_menu_kbd(is_pro=current_user.is_pro)
+        keyboard = build_main_menu_kbd(is_pro=result.is_pro or result.is_admin)
     await message.answer(
         text,
         reply_markup=keyboard,

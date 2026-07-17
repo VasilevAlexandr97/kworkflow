@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 class TelegramAuthResultDTO:
     user_id: UUID
     is_new: bool
+    is_pro: bool
+    is_admin: bool
 
 
 class TelegramAuth:
@@ -37,8 +39,13 @@ class TelegramAuth:
         self,
     ) -> TelegramAuthResultDTO:
         try:
-            user_id = await self.id_provider.get_current_user_id()
-            return TelegramAuthResultDTO(user_id=user_id, is_new=False)
+            user = await self.id_provider.get_current_user()
+            return TelegramAuthResultDTO(
+                user_id=user.id,
+                is_new=False,
+                is_pro=user.is_pro,
+                is_admin=user.is_admin,
+            )
         except AuthenticationError:
             pass
         telegram_id = await self.id_provider.get_current_user_telegram_id()
@@ -71,4 +78,9 @@ class TelegramAuth:
             await self.transaction_manager.rollback()
             logger.info(f"User not created: {new_user!r}")
             raise
-        return TelegramAuthResultDTO(user_id=new_user.id, is_new=True)
+        return TelegramAuthResultDTO(
+            user_id=new_user.id,
+            is_new=True,
+            is_pro=False,
+            is_admin=False,
+        )

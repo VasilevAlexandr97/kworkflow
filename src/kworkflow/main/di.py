@@ -28,8 +28,13 @@ from kworkflow.auth.id_provider import (
     WorkerIdProvider,
 )
 from kworkflow.auth.telegram_auth import TelegramAuth
-from kworkflow.common.generation_limit_checker import GenerationLimitChecker
-from kworkflow.common.subscription_checker import SubscriptionChecker
+from kworkflow.common.dto import CurrentUser
+from kworkflow.common.interfaces.generation_limit_checker import (
+    GenerationLimitChecker,
+)
+from kworkflow.common.interfaces.subscription_checker import (
+    SubscriptionChecker,
+)
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.infra.taskiq.queue import (
@@ -96,9 +101,7 @@ from kworkflow.subscriptions.services import (
     SubscriptionPaymentService,
     SubscriptionRenewalService,
 )
-from kworkflow.users.dto import CurrentUser
 from kworkflow.users.gateways import UserGateway, UserRoleGateway
-from kworkflow.users.services import UserService
 
 
 class InfraProvider(Provider):
@@ -190,11 +193,10 @@ class InfraProvider(Provider):
 class UserProvider(Provider):
     user_gateway = provide(UserGateway, scope=Scope.REQUEST)
     user_role_gateway = provide(UserRoleGateway, scope=Scope.REQUEST)
-    user_service = provide(UserService, scope=Scope.REQUEST)
 
     @provide(scope=Scope.REQUEST)
-    async def get_current_user(self, user_service: UserService) -> CurrentUser:
-        return await user_service.get_current_user()
+    async def get_current_user(self, id_provider: IdProvider) -> CurrentUser:
+        return await id_provider.get_current_user()
 
 
 class ProjectProvider(Provider):
@@ -361,11 +363,13 @@ class TelegramBotProvider(Provider):
         event: TelegramObject,
         user_gateway: UserGateway,
         user_role_gateway: UserRoleGateway,
+        sub_checker: SubscriptionChecker,
     ) -> TelegramIdProvider:
         return TelegramIdProvider(
             telegram_id=event.from_user.id,
             user_gateway=user_gateway,
             user_role_gateway=user_role_gateway,
+            sub_checker=sub_checker,
         )
 
     telegram_auth = provide(TelegramAuth, scope=Scope.REQUEST)

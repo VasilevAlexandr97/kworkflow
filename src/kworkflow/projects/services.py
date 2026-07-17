@@ -7,8 +7,12 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
 from kworkflow.auth.id_provider import IdProvider
-from kworkflow.common.generation_limit_checker import GenerationLimitChecker
-from kworkflow.common.subscription_checker import SubscriptionChecker
+from kworkflow.common.interfaces.generation_limit_checker import (
+    GenerationLimitChecker,
+)
+from kworkflow.common.interfaces.subscription_checker import (
+    SubscriptionChecker,
+)
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.notifications.interfaces import (
@@ -43,8 +47,6 @@ from kworkflow.projects.models import (
     ProjectProposalRequest,
     ProjectProposalRequestStatus,
 )
-from kworkflow.users.gateways import UserRoleGateway
-from kworkflow.users.models import Role
 
 logger = logging.getLogger(__name__)
 
