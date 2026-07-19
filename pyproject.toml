@@ -15,6 +15,7 @@ dependencies = [
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "kwork>=0.2.0",
+    "limits>=5.8.0",
     "openai>=2.38.0",
     "psycopg2-binary>=2.9.12",
     "redis[hiredis]>=7.4.0",

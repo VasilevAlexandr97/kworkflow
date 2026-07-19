@@ -1,3 +1,4 @@
+from kworkflow.common.interfaces.limiter import RateLimiter
 import logging
 
 from base64 import b64encode
@@ -107,7 +108,9 @@ class YooKassaClient:
         self,
         shop_id: str,
         secret_key: str,
+        limiter: RateLimiter,
     ):
+        self.limiter = limiter
         self._auth = b64encode(f"{shop_id}:{secret_key}".encode()).decode()
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
@@ -122,6 +125,7 @@ class YooKassaClient:
         self,
         payment_request: PaymentRequest,
     ) -> PaymentResponse:
+        await self.limiter.acquire()
         payload = payment_request.model_dump(exclude_none=True)
         logger.debug(f"PAYLOAD: {payload}")
         resp = await self._client.post(
@@ -139,6 +143,7 @@ class YooKassaClient:
             raise
 
     async def get_payment(self, payment_id: str) -> PaymentResponse:
+        await self.limiter.acquire()
         resp = await self._client.get(f"/payments/{payment_id}")
         try:
             resp.raise_for_status()

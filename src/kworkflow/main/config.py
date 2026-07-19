@@ -36,6 +36,10 @@ class RedisConfig:
     def connection_url(self):
         return f"redis://:{self.password}@{self.host}:{self.port}"
 
+    @property
+    def async_connection_url(self):
+        return f"async+{self.connection_url}"
+
 
 @dataclass(frozen=True)
 class TelegramBotConfig:

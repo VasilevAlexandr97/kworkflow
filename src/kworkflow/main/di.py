@@ -1,3 +1,4 @@
+from kworkflow.infra.yookassa.limiter import YookassaRateLimiter
 from collections.abc import AsyncIterable
 from typing import Any
 
@@ -182,9 +183,15 @@ class InfraProvider(Provider):
         self,
         config: Config,
     ) -> AsyncIterable[YooKassaClient]:
+        limiter = YookassaRateLimiter(
+            shop_id=config.yookassa.shop_id,
+            redis_uri=config.redis.async_connection_url,
+            limit_per_minute=100,
+        )
         client = YooKassaClient(
             shop_id=config.yookassa.shop_id,
             secret_key=config.yookassa.secret_key,
+            limiter=limiter,
         )
         yield client
         await client.close()
