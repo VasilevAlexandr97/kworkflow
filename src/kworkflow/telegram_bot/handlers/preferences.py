@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.preferences.exceptions import (
-    UserCategoryFollowLimitExceededError,
+    UserCategoryFollowLimitExceededError, FreelancerProfileLengthError,
 )
 from kworkflow.preferences.services import (
     UserCategoryFollowService,
@@ -37,7 +37,7 @@ from kworkflow.telegram_bot.messages import (
     start_edit_profile_message,
     stop_words_limit_exceeded_message,
     stop_words_menu_message,
-    unfollow_all_categories_message,
+    unfollow_all_categories_message, profile_length_error_message,
 )
 from kworkflow.telegram_bot.states import (
     FreelancerProfileState,
@@ -179,11 +179,14 @@ async def edit_profile(
     state_data = await state.get_data()
     last_message_id = state_data.get("last_message_id")
     profile_text = message.text
-    profile = await service.edit_or_create_profile(profile_text)
-    if profile and profile.about:
-        text = profile_info_message(profile.about)
-    else:
-        text = profile_not_set_message()
+    try:
+        profile = await service.edit_or_create_profile(profile_text)
+        if profile and profile.about:
+            text = profile_info_message(profile.about)
+        else:
+            text = profile_not_set_message()
+    except FreelancerProfileLengthError:
+        text = profile_length_error_message()
     keyboard = build_profile_menu_kbd()
     await message.answer(text, reply_markup=keyboard)
     try:

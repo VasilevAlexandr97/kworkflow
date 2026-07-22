@@ -4,6 +4,7 @@ from decimal import Decimal
 from kworkflow.preferences.consts import (
     MAX_FREE_CATEGORIES,
     MAX_FREE_STOP_WORDS,
+    MAX_LENGTH_FREELANCER_PROFILE,
     MAX_PRO_STOP_WORDS,
 )
 from kworkflow.projects.consts import MAX_FREE_GENERATIONS, MAX_PRO_GENERATIONS
@@ -109,7 +110,16 @@ def start_edit_profile_message() -> str:
         "Есть опыт интеграции API, Telegram-ботов и админ-панелей.\n\n"
         "Портфолио:\n"
         "https://example.com\n"
-        "https://github.com/example\n"
+        "https://github.com/example\n\n"
+        f"⚠️ Максимум — {MAX_LENGTH_FREELANCER_PROFILE} символов."
+    )
+
+
+def profile_length_error_message() -> str:
+    return (
+        "❌ Текст профиля слишком длинный.\n\n"
+        f"Максимальная длина — {MAX_LENGTH_FREELANCER_PROFILE} символов.\n\n"
+        "Сократите описание и попробуйте снова."
     )
 
 

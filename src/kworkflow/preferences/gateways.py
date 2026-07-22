@@ -12,6 +12,7 @@ from kworkflow.preferences.exceptions import (
     UserCategoryFollowAlreadyExistsError,
     UserCategoryFollowCreationError,
 )
+from kworkflow.preferences.interfaces import FreelancerProfileGateway
 from kworkflow.preferences.models import (
     UserCategoryFollow,
     UserFreelancerProfile,
@@ -163,11 +164,11 @@ class UserCategoryFollowGateway:
         return list(result.all())
 
 
-class UserFreelancerProfileGateway:
+class SAFreelancerProfileGateway(FreelancerProfileGateway):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add(self, profile: UserFreelancerProfile):
+    async def add(self, profile: UserFreelancerProfile) -> None:
         self.session.add(profile)
         await self.session.flush()
 

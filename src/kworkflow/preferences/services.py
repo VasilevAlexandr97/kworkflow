@@ -27,14 +27,15 @@ from kworkflow.preferences.exceptions import (
 )
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
-    UserFreelancerProfileGateway,
     UserStopWordsGateway,
 )
+from kworkflow.preferences.interfaces import FreelancerProfileGateway
 from kworkflow.preferences.models import (
     UserCategoryFollow,
     UserFreelancerProfile,
     UserStopWord,
 )
+from kworkflow.preferences.validators import freelancer_profile_about_validator
 from kworkflow.projects.exceptions import ProjectCategoryNotFoundError
 from kworkflow.projects.models import ProjectCategory
 
@@ -163,7 +164,7 @@ class UserCategoryFollowService:
 class UserFreelancerProfileService:
     def __init__(
         self,
-        profile_gateway: UserFreelancerProfileGateway,
+        profile_gateway: FreelancerProfileGateway,
         id_provider: IdProvider,
         transaction_manager: TransactionManager,
     ):
@@ -180,6 +181,7 @@ class UserFreelancerProfileService:
         about_text: str,
     ) -> UserFreelancerProfile:
         user_id = await self.id_provider.get_current_user_id()
+        freelancer_profile_about_validator(about_text)
         profile = await self.profile_gateway.get(user_id)
         if profile is not None:
             profile.about = about_text

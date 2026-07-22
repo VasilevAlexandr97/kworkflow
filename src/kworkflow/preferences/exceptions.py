@@ -14,3 +14,7 @@ class UserCategoryFollowCreationError(Exception):
 
 class UserFreelancerProfileNotFoundError(Exception):
     pass
+
+
+class FreelancerProfileLengthError(Exception):
+    pass

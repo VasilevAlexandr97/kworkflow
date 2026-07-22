@@ -19,7 +19,7 @@ from kworkflow.notifications.interfaces import (
     ProposalGeneratedNotificationQueue,
 )
 from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
-from kworkflow.preferences.gateways import UserFreelancerProfileGateway
+from kworkflow.preferences.interfaces import FreelancerProfileGateway
 from kworkflow.projects.dto import (
     ProjectProposalGenerationRequestResult,
     ProjectProposalGenerationRequestStatus,
@@ -170,7 +170,7 @@ class ProjectProposalRequestService:
         self,
         project_gateway: ProjectGateway,
         project_proposal_gateway: ProjectProposalGateway,
-        freelancer_profile_gateway: UserFreelancerProfileGateway,
+        freelancer_profile_gateway: FreelancerProfileGateway,
         project_proposal_request_gateway: ProjectProposalRequestGateway,
         subscription_checker: SubscriptionChecker,
         limit_checker: GenerationLimitChecker,
@@ -256,7 +256,7 @@ class ProjectProposalGenerationService:
         project_gateway: ProjectGateway,
         project_proposal_gateway: ProjectProposalGateway,
         project_proposal_request_gateway: ProjectProposalRequestGateway,
-        freelancer_profile_gateway: UserFreelancerProfileGateway,
+        freelancer_profile_gateway: FreelancerProfileGateway,
         usage_gateway: UserGenerationUsageGateway,
         limit_checker: GenerationLimitChecker,
         subscription_checker: SubscriptionChecker,
