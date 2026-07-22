@@ -35,7 +35,7 @@ async def monitoring_new_projects(
         await notify_new_projects.kiq(new_projects)
 
 
-@broker.task(schedule=[{"cron": "0 * * * *"}])
+@broker.task(schedule=[{"cron": "*/10 * * * *"}])
 @inject
 async def notify_high_value_projects_to_channel(
     service: FromDishka[ProjectNotificationService],
