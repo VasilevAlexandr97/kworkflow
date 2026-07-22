@@ -16,31 +16,41 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='favicon/favicon-16x16.png') }}">
     <link rel="manifest" href="{{ url_for('static', path='favicon/site.webmanifest') }}">
     <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "KworkFlow",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Telegram",
-  "description": "Telegram-бот для мониторинга новых проектов на Kwork, фильтрации по стоп-словам и генерации откликов через ИИ.",
-  "url": "https://t.me/kworkflowbot",
-  "offers": [
-    {
-      "@type": "Offer",
-      "name": "Free",
-      "price": "0",
-      "priceCurrency": "RUB"
-    },
-    {
-      "@type": "Offer",
-      "name": "PRO",
-      "price": "349",
-      "priceCurrency": "RUB",
-      "description": "Пробный период 1₽ за 3 дня, далее 349₽ в месяц"
-    }
-  ]
-}
-</script>
+        {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "KworkFlow",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Telegram",
+        "description": "Telegram-бот для мониторинга новых проектов на Kwork, фильтрации по стоп-словам и генерации откликов через ИИ.",
+        "url": "https://t.me/kworkflowbot",
+        "offers": [
+            {
+            "@type": "Offer",
+            "name": "Free",
+            "price": "0",
+            "priceCurrency": "RUB"
+            },
+            {
+            "@type": "Offer",
+            "name": "PRO",
+            "price": "349",
+            "priceCurrency": "RUB",
+            "description": "Пробный период 1₽ за 3 дня, далее 349₽ в месяц"
+            }
+        ]
+        }
+    </script>
+    <!-- Google Tag Manager -->
+    <script>(function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-W3BKM89M');</script>
+    <!-- End Google Tag Manager -->
     <style>
         :root {
             --white: #ffffff;
@@ -801,7 +811,10 @@
 </head>
 
 <body>
-
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W3BKM89M"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <header>
         <div class="wrap nav">
             <a href="#" class="logo">
@@ -1109,7 +1122,8 @@
 
                 <details>
                     <summary>Как отменить PRO-подписку?</summary>
-                    <p>В меню бота выбери раздел "Управление подпиской" и нажми «Отменить». Доступ к PRO-возможностям сохранится до
+                    <p>В меню бота выбери раздел "Управление подпиской" и нажми «Отменить». Доступ к PRO-возможностям
+                        сохранится до
                         конца оплаченного периода, автопродление отключится.</p>
                 </details>
 
