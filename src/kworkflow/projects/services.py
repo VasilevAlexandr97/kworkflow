@@ -31,13 +31,13 @@ from kworkflow.projects.exceptions import (
 )
 from kworkflow.projects.gateway import (
     ProjectCategoryGateway,
-    ProjectGateway,
     ProjectProposalGateway,
     ProjectProposalRequestGateway,
     UserGenerationUsageGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import (
+    ProjectGateway,
     ProposalGenerationQueue,
 )
 from kworkflow.projects.models import (

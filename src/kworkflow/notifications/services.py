@@ -16,7 +16,8 @@ from kworkflow.preferences.gateways import (
     UserStopWordsGateway,
 )
 from kworkflow.projects.exceptions import ProjectProposalNotFoundError
-from kworkflow.projects.gateway import ProjectGateway, ProjectProposalGateway
+from kworkflow.projects.gateway import ProjectProposalGateway
+from kworkflow.projects.interfaces import ProjectGateway
 from kworkflow.telegram_bot.keyboards import (
     build_no_active_subscription_kbd,
     build_project_kbd,

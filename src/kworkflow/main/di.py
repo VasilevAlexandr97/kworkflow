@@ -1,4 +1,3 @@
-from kworkflow.infra.yookassa.limiter import YookassaRateLimiter
 from collections.abc import AsyncIterable
 from typing import Any
 
@@ -46,6 +45,7 @@ from kworkflow.infra.taskiq.queue import (
 )
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.infra.yookassa.client import YooKassaClient
+from kworkflow.infra.yookassa.limiter import YookassaRateLimiter
 from kworkflow.main.config import Config
 from kworkflow.notifications.gateways import ProjectNotificationGateway
 from kworkflow.notifications.interfaces import (
@@ -70,13 +70,16 @@ from kworkflow.preferences.services import (
 )
 from kworkflow.projects.gateway import (
     ProjectCategoryGateway,
-    ProjectGateway,
     ProjectProposalGateway,
     ProjectProposalRequestGateway,
+    SAProjectGateway,
     UserGenerationUsageGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
-from kworkflow.projects.interfaces import ProposalGenerationQueue
+from kworkflow.projects.interfaces import (
+    ProjectGateway,
+    ProposalGenerationQueue,
+)
 from kworkflow.projects.services import (
     ProjectCategoryService,
     ProjectProposalGenerationService,
@@ -216,8 +219,9 @@ class ProjectProvider(Provider):
         scope=Scope.REQUEST,
     )
     project_gateway = provide(
-        ProjectGateway,
+        SAProjectGateway,
         scope=Scope.REQUEST,
+        provides=ProjectGateway,
     )
     project_sync_service = provide(
         ProjectSyncService,

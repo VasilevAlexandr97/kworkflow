@@ -2,6 +2,33 @@ from abc import abstractmethod
 from typing import Protocol
 from uuid import UUID
 
+from kworkflow.projects.models import Project
+
+
+class ProjectGateway(Protocol):
+    @abstractmethod
+    async def bulk_insert(self, projects: list[Project]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_missing_external_ids(
+        self,
+        external_ids: list[int],
+    ) -> set[int]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_projects_by_ids(
+        self,
+        project_ids: list[UUID],
+        with_category: bool = False,
+    ) -> list[Project]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_id(self, project_id: UUID) -> Project | None:
+        raise NotImplementedError
+
 
 class ProposalGenerationQueue(Protocol):
     @abstractmethod
