@@ -3,6 +3,11 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from kworkflow.notifications.models import (
+    ChannelNotification,
+    ProjectNotification,
+)
+
 
 class ProposalGeneratedNotificationQueue(Protocol):
     @abstractmethod
@@ -34,4 +39,26 @@ class SubscriptionRenewalNotificationQueue(Protocol):
 
     @abstractmethod
     async def enqueue_revoked(self, user_id: UUID) -> None:
+        raise NotImplementedError
+
+
+class ProjectNotificationGateway:
+    @abstractmethod
+    async def bulk_insert(
+        self,
+        notifications: list[ProjectNotification],
+    ) -> None:
+        raise NotImplementedError
+
+
+class ChannelNotificationGateway:
+    @abstractmethod
+    async def already_sent(self, project_ids: list[UUID]) -> set[UUID]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def bulk_insert(
+        self,
+        notifications: list[ChannelNotification],
+    ) -> None:
         raise NotImplementedError

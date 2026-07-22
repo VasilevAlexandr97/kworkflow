@@ -6,6 +6,7 @@ from uuid import UUID
 from dishka.integrations.taskiq import FromDishka, inject
 
 from kworkflow.infra.taskiq.broker import broker
+from kworkflow.main.config import Config
 from kworkflow.notifications.services import (
     ProjectNotificationService,
     ProjectProposalNotificationService,
@@ -32,6 +33,20 @@ async def monitoring_new_projects(
     logger.info(f"NEW PROJECTS: {new_projects}")
     if new_projects:
         await notify_new_projects.kiq(new_projects)
+
+
+@broker.task(schedule=[{"cron": "0 * * * *"}])
+@inject
+async def notify_high_value_projects_to_channel(
+    service: FromDishka[ProjectNotificationService],
+    config: FromDishka[Config],
+):
+    if config.telegram_channel_id is None:
+        logger.warning("TELEGRAM_CHANNEL_ID not configured")
+        return
+    await service.notify_high_value_projects_channel(
+        channel_id=config.telegram_channel_id,
+    )
 
 
 @broker.task()

@@ -7,7 +7,7 @@ from kworkflow.common.interfaces.subscription_checker import (
     SubscriptionChecker,
 )
 from kworkflow.projects.consts import MAX_FREE_GENERATIONS, MAX_PRO_GENERATIONS
-from kworkflow.projects.gateway import UserGenerationUsageGateway
+from kworkflow.projects.gateways import UserGenerationUsageGateway
 from kworkflow.users.gateways import UserRoleGateway
 from kworkflow.users.models import Role
 

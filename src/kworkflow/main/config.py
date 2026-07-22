@@ -2,6 +2,10 @@ import os
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
 
@@ -82,6 +86,7 @@ class Config:
     yookassa: YookassaConfig
     web: WebConfig
     # project_dir: Path = PROJECT_DIR
+    telegram_channel_id: int | None = None
     debug: bool = field(default=False)
 
 
@@ -92,11 +97,23 @@ def get_required_env(env_var: str) -> str:
     return value
 
 
-def get_optional_env(name: str) -> str | None:
-    return os.getenv(name)
+def get_optional_env(env_var: str) -> str | None:
+    return os.getenv(env_var)
 
 
 def get_config() -> Config:
+    telegram_channel_id = get_optional_env("TELEGRAM_CHANNEL_ID")
+    if telegram_channel_id is not None:
+        channel_id = int(telegram_channel_id)
+        if channel_id >= 0:
+            logger.warning(
+                f"TELEGRAM_CHANNEL_ID={channel_id} "
+                "should be negative for Telegram channel",
+            )
+            telegram_channel_id = None
+        else:
+            telegram_channel_id = channel_id
+
     return Config(
         postgres=PostgresConfig(
             host=get_required_env("POSTGRES_HOST"),
@@ -117,7 +134,6 @@ def get_config() -> Config:
             login=get_required_env("KWORK_USERNAME"),
             password=get_required_env("KWORK_PASSWORD"),
         ),
-        debug=get_optional_env("DEBUG") in ("True", "true", "1"),
         polza=PolzaConfig(
             api_key=get_required_env("POLZA_API_KEY"),
             base_url=get_required_env("POLZA_BASE_URL"),
@@ -127,6 +143,8 @@ def get_config() -> Config:
             secret_key=get_required_env("YOOKASSA_SECRET_KEY"),
         ),
         web=WebConfig(),
+        telegram_channel_id=telegram_channel_id,
+        debug=get_optional_env("DEBUG") in ("True", "true", "1"),
     )
 
 

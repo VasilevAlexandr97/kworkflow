@@ -29,7 +29,7 @@ from kworkflow.projects.exceptions import (
     ProjectNotFoundError,
     ProjectProposalGenerationError,
 )
-from kworkflow.projects.gateway import (
+from kworkflow.projects.gateways import (
     ProjectCategoryGateway,
     ProjectProposalGateway,
     ProjectProposalRequestGateway,

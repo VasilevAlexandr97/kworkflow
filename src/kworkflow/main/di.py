@@ -47,8 +47,13 @@ from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.infra.yookassa.client import YooKassaClient
 from kworkflow.infra.yookassa.limiter import YookassaRateLimiter
 from kworkflow.main.config import Config
-from kworkflow.notifications.gateways import ProjectNotificationGateway
+from kworkflow.notifications.gateways import (
+    SAChannelNotificationGateway,
+    SAProjectNotificationGateway,
+)
 from kworkflow.notifications.interfaces import (
+    ChannelNotificationGateway,
+    ProjectNotificationGateway,
     ProposalGeneratedNotificationQueue,
     SubscriptionActivatedNotificationQueue,
     SubscriptionRenewalNotificationQueue,
@@ -69,7 +74,7 @@ from kworkflow.preferences.services import (
     UserFreelancerProfileService,
     UserStopWordsService,
 )
-from kworkflow.projects.gateway import (
+from kworkflow.projects.gateways import (
     ProjectCategoryGateway,
     ProjectProposalGateway,
     ProjectProposalRequestGateway,
@@ -295,8 +300,14 @@ class PreferenceProvider(Provider):
 
 class NotificationProvider(Provider):
     project_notification_gateway = provide(
-        ProjectNotificationGateway,
+        SAProjectNotificationGateway,
         scope=Scope.REQUEST,
+        provides=ProjectNotificationGateway,
+    )
+    channel_notification_gateway = provide(
+        SAChannelNotificationGateway,
+        scope=Scope.REQUEST,
+        provides=ChannelNotificationGateway,
     )
     project_notification_service = provide(
         ProjectNotificationService,

@@ -9,14 +9,20 @@ from redis.asyncio.lock import Lock
 
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
-from kworkflow.notifications.gateways import ProjectNotificationGateway
-from kworkflow.notifications.models import ProjectNotification
+from kworkflow.notifications.interfaces import (
+    ChannelNotificationGateway,
+    ProjectNotificationGateway,
+)
+from kworkflow.notifications.models import (
+    ProjectNotification,
+    ChannelNotification,
+)
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
 from kworkflow.projects.exceptions import ProjectProposalNotFoundError
-from kworkflow.projects.gateway import ProjectProposalGateway
+from kworkflow.projects.gateways import ProjectProposalGateway
 from kworkflow.projects.interfaces import ProjectGateway
 from kworkflow.telegram_bot.keyboards import (
     build_no_active_subscription_kbd,
@@ -36,7 +42,8 @@ class ProjectNotificationService:
         project_gateway: ProjectGateway,
         follow_gateway: UserCategoryFollowGateway,
         stop_words_gateway: UserStopWordsGateway,
-        notification_gateway: ProjectNotificationGateway,
+        project_notification_gateway: ProjectNotificationGateway,
+        channel_notification_gateway: ChannelNotificationGateway,
         telegram_notifier: TelegramNotifier,
         transaction_manager: TransactionManager,
         redis: Redis,
@@ -44,7 +51,8 @@ class ProjectNotificationService:
         self.project_gateway = project_gateway
         self.follow_gateway = follow_gateway
         self.stop_words_gateway = stop_words_gateway
-        self.notification_gateway = notification_gateway
+        self.project_notification_gateway = project_notification_gateway
+        self.channel_notification_gateway = channel_notification_gateway
         self.telegram_notifier = telegram_notifier
         self.transaction_manager = transaction_manager
         self.redis = redis
@@ -87,8 +95,8 @@ class ProjectNotificationService:
                         continue
                     try:
                         await self.telegram_notifier.send_message(
-                            user.telegram_id,
-                            project_message(project),
+                            chat_id=user.telegram_id,
+                            text=project_message(project),
                             keyboard=build_project_kbd(project.id),
                         )
                         project_notifications.append(
@@ -103,7 +111,42 @@ class ProjectNotificationService:
                     await asyncio.sleep(0.3)
 
         if project_notifications:
-            await self.notification_gateway.bulk_insert(project_notifications)
+            await self.project_notification_gateway.bulk_insert(
+                project_notifications,
+            )
+            await self.transaction_manager.commit()
+
+    async def notify_high_value_projects_channel(self, channel_id: int):
+        projects = await self.project_gateway.get_recent_projects_by_min_price(
+            min_price=30000,
+            limit=10,
+        )
+        already_sent = await self.channel_notification_gateway.already_sent(
+            [p.id for p in projects],
+        )
+        new_projects = [p for p in projects if p.id not in already_sent]
+        logger.info(f"HIGH VALUE PROJECTS: {new_projects}")
+        channel_notifications = []
+        for project in new_projects:
+            try:
+                await self.telegram_notifier.send_message(
+                    chat_id=channel_id,
+                    text=project_message(project),
+                )
+                channel_notifications.append(
+                    ChannelNotification(
+                        project_id=project.id,
+                        sent_at=datetime.now(UTC),
+                    ),
+                )
+            except Exception:
+                logger.exception(
+                    f"Failed to send message to channel: {channel_id}",
+                )
+        if channel_notifications:
+            await self.channel_notification_gateway.bulk_insert(
+                channel_notifications,
+            )
             await self.transaction_manager.commit()
 
 

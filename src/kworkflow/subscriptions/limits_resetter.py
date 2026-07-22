@@ -8,7 +8,7 @@ from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
-from kworkflow.projects.gateway import UserGenerationUsageGateway
+from kworkflow.projects.gateways import UserGenerationUsageGateway
 from kworkflow.subscriptions.interfaces import SubscriptionLimitsResetter
 
 
