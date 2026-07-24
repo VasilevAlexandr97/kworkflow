@@ -7,9 +7,14 @@ from fastapi.staticfiles import StaticFiles
 
 from kworkflow.main.config import Config, get_config
 from kworkflow.main.di import WebProvider, create_container
+from kworkflow.web.middlewares.security import SecurityHeadersMiddleware
 from kworkflow.web.routers.index import router as index_router
 from kworkflow.web.routers.robots import router as robots_router
 from kworkflow.web.routers.sitemap import router as sitemap_router
+
+
+def setup_middlewares(app: FastAPI):
+    app.add_middleware(SecurityHeadersMiddleware)
 
 
 def setup_routers(app: FastAPI):
@@ -26,12 +31,21 @@ def create_app():
         providers=[WebProvider()],
         context={Config: config, Bot: bot},
     )
-    app = FastAPI(debug=config.debug)
+    if config.debug:
+        app = FastAPI(debug=config.debug)
+    else:
+        app = FastAPI(
+            debug=config.debug,
+            docs_url=None,
+            redoc_url=None,
+            openapi_url=None,
+        )
     app.mount(
         "/static",
         StaticFiles(directory=config.web.static_dir),
         name="static",
     )
+    setup_middlewares(app)
     setup_routers(app)
     setup_dishka(container, app)
     return app
