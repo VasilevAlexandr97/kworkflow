@@ -10,5 +10,9 @@ class StopWordsState(StatesGroup):
     delete = State()
 
 
+class PriceFilterState(StatesGroup):
+    set = State()
+
+
 class PaymentState(StatesGroup):
     set_email = State()

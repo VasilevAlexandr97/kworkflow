@@ -14,13 +14,14 @@ from kworkflow.notifications.interfaces import (
     ProjectNotificationGateway,
 )
 from kworkflow.notifications.models import (
-    ProjectNotification,
     ChannelNotification,
+    ProjectNotification,
 )
 from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
+from kworkflow.preferences.interfaces import UserPriceFilterGateway
 from kworkflow.projects.exceptions import ProjectProposalNotFoundError
 from kworkflow.projects.gateways import ProjectProposalGateway
 from kworkflow.projects.interfaces import ProjectGateway
@@ -42,6 +43,7 @@ class ProjectNotificationService:
         project_gateway: ProjectGateway,
         follow_gateway: UserCategoryFollowGateway,
         stop_words_gateway: UserStopWordsGateway,
+        price_filter_gateway: UserPriceFilterGateway,
         project_notification_gateway: ProjectNotificationGateway,
         channel_notification_gateway: ChannelNotificationGateway,
         telegram_notifier: TelegramNotifier,
@@ -51,6 +53,7 @@ class ProjectNotificationService:
         self.project_gateway = project_gateway
         self.follow_gateway = follow_gateway
         self.stop_words_gateway = stop_words_gateway
+        self.price_filter_gateway = price_filter_gateway
         self.project_notification_gateway = project_notification_gateway
         self.channel_notification_gateway = channel_notification_gateway
         self.telegram_notifier = telegram_notifier
@@ -88,11 +91,25 @@ class ProjectNotificationService:
                         user_ids,
                     )
                 )
+                price_filter_map = (
+                    await self.price_filter_gateway.get_filter_by_user_ids(
+                        user_ids,
+                    )
+                )
                 project_text = f"{project.title} {project.description}"
                 for user in users:
                     user_stop_words = stop_words_map.get(user.id, [])
                     if self._contains_stop_word(project_text, user_stop_words):
                         continue
+                    price_filter = price_filter_map.get(user.id)
+                    if price_filter is not None:
+                        min_price = price_filter[0]
+                        max_price = price_filter[1]
+                        if (
+                            min_price > project.price
+                            or project.price > max_price
+                        ):
+                            continue
                     try:
                         await self.telegram_notifier.send_message(
                             chat_id=user.telegram_id,

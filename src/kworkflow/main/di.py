@@ -65,13 +65,18 @@ from kworkflow.notifications.services import (
 )
 from kworkflow.preferences.gateways import (
     SAFreelancerProfileGateway,
+    SAUserPriceFilterGateway,
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
-from kworkflow.preferences.interfaces import FreelancerProfileGateway
+from kworkflow.preferences.interfaces import (
+    FreelancerProfileGateway,
+    UserPriceFilterGateway,
+)
 from kworkflow.preferences.services import (
     UserCategoryFollowService,
     UserFreelancerProfileService,
+    UserPriceFilterService,
     UserStopWordsService,
 )
 from kworkflow.projects.gateways import (
@@ -294,6 +299,15 @@ class PreferenceProvider(Provider):
     )
     user_stop_words_service = provide(
         UserStopWordsService,
+        scope=Scope.REQUEST,
+    )
+    user_price_filter_gateway = provide(
+        SAUserPriceFilterGateway,
+        scope=Scope.REQUEST,
+        provides=UserPriceFilterGateway,
+    )
+    user_price_filter_service = provide(
+        UserPriceFilterService,
         scope=Scope.REQUEST,
     )
 

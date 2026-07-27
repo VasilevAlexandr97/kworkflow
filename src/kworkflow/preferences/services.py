@@ -12,8 +12,10 @@ from kworkflow.preferences.consts import (
     MAX_FREE_CATEGORIES,
     MAX_FREE_STOP_WORDS,
     MAX_LENGTH_STOP_WORD,
+    MAX_PRICE_FILTER_VALUE,
     MAX_PRO_CATEGORIES,
     MAX_PRO_STOP_WORDS,
+    MIN_PRICE_FILTER_VALUE,
 )
 from kworkflow.preferences.dto import (
     CategoryWithFollowedStatusDTO,
@@ -29,13 +31,20 @@ from kworkflow.preferences.gateways import (
     UserCategoryFollowGateway,
     UserStopWordsGateway,
 )
-from kworkflow.preferences.interfaces import FreelancerProfileGateway
+from kworkflow.preferences.interfaces import (
+    FreelancerProfileGateway,
+    UserPriceFilterGateway,
+)
 from kworkflow.preferences.models import (
     UserCategoryFollow,
     UserFreelancerProfile,
+    UserPriceFilter,
     UserStopWord,
 )
-from kworkflow.preferences.validators import freelancer_profile_about_validator
+from kworkflow.preferences.validators import (
+    freelancer_profile_about_validator,
+    price_filter_range_validator,
+)
 from kworkflow.projects.exceptions import ProjectCategoryNotFoundError
 from kworkflow.projects.models import ProjectCategory
 
@@ -311,3 +320,45 @@ class UserStopWordsService:
             current_count=count,
         )
         return CountStopWordsDTO(count=count, available=available, limit=limit)
+
+
+class UserPriceFilterService:
+    def __init__(
+        self,
+        gateway: UserPriceFilterGateway,
+        id_provider: IdProvider,
+        transaction_manager: TransactionManager,
+    ):
+        self.gateway = gateway
+        self.id_provider = id_provider
+        self.transaction_manager = transaction_manager
+
+    async def get_price_filter(self) -> UserPriceFilter | None:
+        user_id = await self.id_provider.get_current_user_id()
+        return await self.gateway.get_by_user_id(user_id)
+
+    async def set_price_filter(
+        self,
+        min_price: int,
+        max_price: int,
+    ) -> UserPriceFilter:
+        min_price = max(min_price, MIN_PRICE_FILTER_VALUE)
+        max_price = min(max_price, MAX_PRICE_FILTER_VALUE)
+        price_filter_range_validator(min_price=min_price, max_price=max_price)
+        user_id = await self.id_provider.get_current_user_id()
+        now = datetime.now(UTC)
+        price_filter = UserPriceFilter(
+            user_id=user_id,
+            min_price=min_price,
+            max_price=max_price,
+            created_at=now,
+            updated_at=now,
+        )
+        await self.gateway.upsert(price_filter)
+        await self.transaction_manager.commit()
+        return price_filter
+
+    async def clear_price_filter(self) -> None:
+        user_id = await self.id_provider.get_current_user_id()
+        await self.gateway.delete_by_user_id(user_id=user_id)
+        await self.transaction_manager.commit()

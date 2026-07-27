@@ -18,3 +18,7 @@ class UserFreelancerProfileNotFoundError(Exception):
 
 class FreelancerProfileLengthError(Exception):
     pass
+
+
+class PriceFilterRangeError(Exception):
+    pass

@@ -7,11 +7,14 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.preferences.exceptions import (
-    UserCategoryFollowLimitExceededError, FreelancerProfileLengthError,
+    FreelancerProfileLengthError,
+    PriceFilterRangeError,
+    UserCategoryFollowLimitExceededError,
 )
 from kworkflow.preferences.services import (
     UserCategoryFollowService,
     UserFreelancerProfileService,
+    UserPriceFilterService,
     UserStopWordsService,
 )
 from kworkflow.projects.services import ProjectCategoryService
@@ -21,26 +24,33 @@ from kworkflow.telegram_bot.keyboards import (
     build_edit_profile_kbd,
     build_followed_categories_kbd,
     build_followed_subcategories_kbd,
+    build_price_filter_menu_kbd,
     build_profile_menu_kbd,
     build_start_add_stop_words_kbd,
     build_start_delete_stop_words_kbd,
+    build_start_set_price_filter_kbd,
     build_stop_words_menu_kbd,
 )
 from kworkflow.telegram_bot.messages import (
     categories_limit_exceeded_message,
     empty_stop_words_delete_message,
+    price_filter_format_error_message,
+    price_filter_menu_message,
     profile_info_message,
+    profile_length_error_message,
     profile_not_set_message,
     select_followed_categories_message,
     start_add_stop_words_message,
     start_delete_stop_words_message,
     start_edit_profile_message,
+    start_set_price_filter_message,
     stop_words_limit_exceeded_message,
     stop_words_menu_message,
-    unfollow_all_categories_message, profile_length_error_message,
+    unfollow_all_categories_message,
 )
 from kworkflow.telegram_bot.states import (
     FreelancerProfileState,
+    PriceFilterState,
     StopWordsState,
 )
 
@@ -277,8 +287,8 @@ async def start_delete_stop_words(
 async def delete_stop_words(
     message: types.Message,
     service: FromDishka[UserStopWordsService],
-    state: FSMContext,
     bot: FromDishka[Bot],
+    state: FSMContext,
 ):
     state_data = await state.get_data()
     last_message_id = state_data.get("last_message_id")
@@ -291,3 +301,90 @@ async def delete_stop_words(
             await bot.delete_message(message.from_user.id, last_message_id)
     await message.answer(text, reply_markup=keyboard)
     await state.clear()
+
+
+@router.callback_query(F.data == "price_filter_menu")
+@router.callback_query(F.data == "cancel_set_price_filter")
+@inject
+async def price_filter_menu(
+    call: types.CallbackQuery,
+    service: FromDishka[UserPriceFilterService],
+    state: FSMContext,
+):
+    price_filter = await service.get_price_filter()
+    text = price_filter_menu_message(price_filter)
+    keyboard = build_price_filter_menu_kbd(with_clear=price_filter is not None)
+    await call.message.edit_text(
+        text=text,
+        reply_markup=keyboard,
+    )
+    await call.answer()
+    await state.clear()
+
+
+@router.callback_query(F.data == "set_price_filter")
+@inject
+async def start_set_price_filter(
+    call: types.CallbackQuery,
+    state: FSMContext,
+):
+    text = start_set_price_filter_message()
+    keyboard = build_start_set_price_filter_kbd()
+    await state.set_data({"last_message_id": call.message.message_id})
+    await state.set_state(PriceFilterState.set)
+    await call.message.edit_text(text=text, reply_markup=keyboard)
+
+
+@router.message(PriceFilterState.set)
+@inject
+async def set_price_filter(
+    message: types.Message,
+    service: FromDishka[UserPriceFilterService],
+    bot: FromDishka[Bot],
+    state: FSMContext,
+):
+    if message.text is None:
+        return
+    set_last_msg = False
+    raw = message.text.strip()
+    parts = raw.split("-", 1)
+    if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+        text = price_filter_format_error_message()
+        keyboard = build_start_set_price_filter_kbd()
+        set_last_msg = True
+    else:
+        min_price = int(parts[0])
+        max_price = int(parts[1])
+        try:
+            price_filter = await service.set_price_filter(
+                min_price=min_price,
+                max_price=max_price,
+            )
+            text = price_filter_menu_message(price_filter)
+            keyboard = build_price_filter_menu_kbd(with_clear=True)
+        except PriceFilterRangeError:
+            text = price_filter_format_error_message()
+            keyboard = build_start_set_price_filter_kbd()
+            set_last_msg = True
+    state_data = await state.get_data()
+    # TODO: вынести в отдельную функцию, удаление предыдущего сообщения
+    last_message_id = state_data.get("last_message_id")
+    if last_message_id is not None:
+        with contextlib.suppress(TelegramBadRequest):
+            await bot.delete_message(message.from_user.id, last_message_id)
+    r = await message.answer(text, reply_markup=keyboard)
+    if set_last_msg:
+        await state.set_data({"last_message_id": r.message_id})
+    else:
+        await state.clear()
+
+@router.callback_query(F.data == "clear_price_filter")
+@inject
+async def clear_price_filter(
+    call: types.CallbackQuery,
+    service: FromDishka[UserPriceFilterService],
+):
+    await service.clear_price_filter()
+    text = price_filter_menu_message()
+    keyboard = build_price_filter_menu_kbd(with_clear=False)
+    await call.message.edit_text(text, reply_markup=keyboard)

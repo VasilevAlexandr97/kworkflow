@@ -7,6 +7,7 @@ from kworkflow.preferences.consts import (
     MAX_LENGTH_FREELANCER_PROFILE,
     MAX_PRO_STOP_WORDS,
 )
+from kworkflow.preferences.models import UserPriceFilter
 from kworkflow.projects.consts import MAX_FREE_GENERATIONS, MAX_PRO_GENERATIONS
 from kworkflow.projects.models import Project, ProjectCategory
 from kworkflow.subscriptions.dto import SubscriptionInfoDTO
@@ -172,6 +173,41 @@ def empty_stop_words_delete_message() -> str:
 
 def stop_words_limit_exceeded_message(limit: int) -> str:
     return f"❌ Достигнут лимит в {limit} стоп-слов."
+
+
+def price_filter_menu_message(
+    price_filter: UserPriceFilter | None = None,
+) -> str:
+    text = (
+        "💰 <b>Фильтр цен</b>\n\n"
+        "Фильтр цен позволяет убирать из уведомлений проекты "
+        "с бюджетом вне указанного диапазона.\n\n"
+    )
+    if price_filter:
+        text += (
+            f"✅ Текущий фильтр: от {price_filter.min_price}₽ "
+            f"до {price_filter.max_price}₽"
+        )
+    else:
+        text += "❌ Фильтр не установлен — приходят проекты с любой ценой."
+    return text
+
+
+def start_set_price_filter_message() -> str:
+    return (
+        "✏️ <b>Установка фильтра цен</b>\n\n"
+        "Введите диапазон в формате: min-max\n\n"
+        "Например:\n"
+        "• 1000-50000 — проекты от 1000₽ до 50000₽\n\n"
+        'Чтобы отменить — нажмите кнопку "✖️ Отмена"'
+    )
+
+
+def price_filter_format_error_message() -> str:
+    return (
+        "❌ Неверный формат. Введите два числа через дефис: min-max\n\n"
+        "Пример: 1000-50000\n\n"
+    )
 
 
 def generating_proposal_message() -> str:

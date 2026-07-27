@@ -7,6 +7,7 @@ from sqlalchemy import (
     String,
     func,
     text,
+    Integer,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -58,6 +59,7 @@ class UserFreelancerProfile(Base):
         nullable=False,
         server_default=func.now(),
     )
+    # TODO: добавить updated_at, а так же посмотреть как обновляется профиль
 
 
 class UserStopWord(Base):
@@ -76,4 +78,23 @@ class UserStopWord(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+
+class UserPriceFilter(Base):
+    __tablename__ = "user_price_filters"
+
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    min_price: Mapped[int]
+    max_price: Mapped[int]
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
     )

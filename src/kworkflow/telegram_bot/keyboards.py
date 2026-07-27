@@ -64,6 +64,10 @@ def build_main_menu_kbd(is_pro: bool = False, is_admin: bool = False):
             text="🛑 Стоп слова",
             callback_data="stop_words_menu",
         ),
+        InlineKeyboardButton(
+            text="💰 Фильтр цен",
+            callback_data="price_filter_menu",
+        ),
     )
     if not is_admin:
         if is_pro:
@@ -218,6 +222,42 @@ def build_start_delete_stop_words_kbd():
         InlineKeyboardButton(
             text="✖️ Отмена",
             callback_data="cancel_delete_stop_words",
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_price_filter_menu_kbd(with_clear: bool = False):
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        InlineKeyboardButton(
+            text="✏️ Установить",
+            callback_data="set_price_filter",
+        ),
+    )
+    if with_clear:
+        builder.add(
+            InlineKeyboardButton(
+                text="🗑 Сбросить",
+                callback_data="clear_price_filter",
+            ),
+        )
+    builder.adjust(2)
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_start_set_price_filter_kbd():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✖️ Отмена",
+            callback_data="cancel_set_price_filter",
         ),
     )
     return builder.as_markup()

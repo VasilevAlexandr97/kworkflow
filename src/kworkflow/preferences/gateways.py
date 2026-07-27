@@ -12,11 +12,15 @@ from kworkflow.preferences.exceptions import (
     UserCategoryFollowAlreadyExistsError,
     UserCategoryFollowCreationError,
 )
-from kworkflow.preferences.interfaces import FreelancerProfileGateway
+from kworkflow.preferences.interfaces import (
+    FreelancerProfileGateway,
+    UserPriceFilterGateway,
+)
 from kworkflow.preferences.models import (
     UserCategoryFollow,
     UserFreelancerProfile,
     UserStopWord,
+    UserPriceFilter,
 )
 from kworkflow.projects.models import ProjectCategory
 from kworkflow.users.models import User
@@ -261,3 +265,58 @@ class UserStopWordsGateway:
         for user_id, word in rows:
             stop_words_map.setdefault(user_id, []).append(word)
         return stop_words_map
+
+
+class SAUserPriceFilterGateway(UserPriceFilterGateway):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def upsert(self, price_filter: UserPriceFilter) -> None:
+        stmt = (
+            pg_insert(UserPriceFilter)
+            .values(
+                user_id=price_filter.user_id,
+                min_price=price_filter.min_price,
+                max_price=price_filter.max_price,
+                created_at=price_filter.created_at,
+                updated_at=price_filter.updated_at,
+            )
+            .on_conflict_do_update(
+                index_elements=[UserPriceFilter.user_id],
+                set_={
+                    "min_price": price_filter.min_price,
+                    "max_price": price_filter.max_price,
+                    "updated_at": price_filter.updated_at,
+                },
+            )
+        )
+        await self.session.execute(stmt)
+
+    async def delete_by_user_id(self, user_id: UUID) -> None:
+        stmt = delete(UserPriceFilter).where(
+            UserPriceFilter.user_id == user_id,
+        )
+        await self.session.execute(stmt)
+
+    async def get_by_user_id(self, user_id: UUID) -> UserPriceFilter | None:
+        stmt = (
+            select(UserPriceFilter)
+            .where(UserPriceFilter.user_id == user_id)
+        )
+        return await self.session.scalar(stmt)
+
+    async def get_filter_by_user_ids(
+        self,
+        user_ids: list[UUID],
+    ) -> dict[UUID, tuple[int, int]]:
+        stmt = select(
+            UserPriceFilter.user_id,
+            UserPriceFilter.min_price,
+            UserPriceFilter.max_price,
+        ).where(UserPriceFilter.user_id.in_(user_ids))
+        result = await self.session.execute(stmt)
+        rows = result.all()
+        price_filters_map: dict[UUID, tuple[int, int]] = {}
+        for user_id, min_price, max_price in rows:
+            price_filters_map[user_id] = (min_price, max_price)
+        return price_filters_map
