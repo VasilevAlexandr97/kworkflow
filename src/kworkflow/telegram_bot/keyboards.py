@@ -10,7 +10,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from kworkflow.preferences.dto import CategoryWithFollowedStatusDTO
-from kworkflow.projects.models import ProjectCategory
+from kworkflow.projects.models import ProjectCategory, Project
 from kworkflow.subscriptions.models import PlanSlug
 
 
@@ -263,12 +263,21 @@ def build_start_set_price_filter_kbd():
     return builder.as_markup()
 
 
-def build_project_kbd(project_id: UUID):
+def build_project_kbd(project: Project, ref_id: int | None = None):
+    project_link = f"https://kwork.ru/projects/{project.external_id}"
+    if ref_id is not None:
+        project_link += f"?ref={ref_id}"
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
             text="✍️ Сгенерировать отклик",
-            callback_data=GenerateProposalCB(project_id=project_id).pack(),
+            callback_data=GenerateProposalCB(project_id=project.id).pack(),
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="Проект",
+            url=project_link,
         ),
     )
     builder.row(

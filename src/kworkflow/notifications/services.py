@@ -49,6 +49,7 @@ class ProjectNotificationService:
         telegram_notifier: TelegramNotifier,
         transaction_manager: TransactionManager,
         redis: Redis,
+        kwork_ref_id: int | None = None,
     ):
         self.project_gateway = project_gateway
         self.follow_gateway = follow_gateway
@@ -60,6 +61,7 @@ class ProjectNotificationService:
         self.transaction_manager = transaction_manager
         self.redis = redis
         self.lock = Lock(self.redis, "project_notification", timeout=600)
+        self.kwork_ref_id = kwork_ref_id
 
     def _contains_stop_word(self, text: str, stop_words: list[str]) -> bool:
         if not stop_words:
@@ -113,8 +115,14 @@ class ProjectNotificationService:
                     try:
                         await self.telegram_notifier.send_message(
                             chat_id=user.telegram_id,
-                            text=project_message(project),
-                            keyboard=build_project_kbd(project.id),
+                            text=project_message(
+                                project,
+                                ref_id=self.kwork_ref_id,
+                            ),
+                            keyboard=build_project_kbd(
+                                project,
+                                ref_id=self.kwork_ref_id,
+                            ),
                         )
                         project_notifications.append(
                             ProjectNotification(
@@ -148,7 +156,7 @@ class ProjectNotificationService:
             try:
                 await self.telegram_notifier.send_message(
                     chat_id=channel_id,
-                    text=project_message(project),
+                    text=project_message(project, ref_id=self.kwork_ref_id),
                 )
                 channel_notifications.append(
                     ChannelNotification(

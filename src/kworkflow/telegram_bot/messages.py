@@ -14,16 +14,19 @@ from kworkflow.subscriptions.dto import SubscriptionInfoDTO
 from kworkflow.subscriptions.models import PlanSlug
 
 
-def project_message(project: Project) -> str:
+def project_message(project: Project, ref_id: int | None = None) -> str:
+    project_link = f"https://kwork.ru/projects/{project.external_id}"
+    if ref_id is not None:
+        project_link += f"?ref={ref_id}"
     return (
         "🔔 Новый проект\n\n"
         f"📂 {project.category.title}\n\n"
-        f"<b>📌 {project.title}</b>\n\n"
+        f"📌 <a href='{project_link}'><b>{project.title}</b></a>\n\n"
         f"💰 Бюджет\n"
         f"• Желаемый: {project.price} ₽\n"
         f"• Допустимый: {project.possible_price_limit} ₽\n\n"
         f"📝 {project.description}\n\n"
-        f"🔗 https://kwork.ru/projects/{project.external_id}/view"
+        f"🔗 <a href='{project_link}'>Ссылка на проект</a>"
     )
 
 

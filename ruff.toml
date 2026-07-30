@@ -70,6 +70,8 @@ lint.ignore = [
     "PLR0913",
     "RUF001",
     "RET504",
+
+    "CPY001",
 ]
 
 

@@ -323,10 +323,34 @@ class NotificationProvider(Provider):
         scope=Scope.REQUEST,
         provides=ChannelNotificationGateway,
     )
-    project_notification_service = provide(
-        ProjectNotificationService,
-        scope=Scope.REQUEST,
-    )
+
+    @provide(scope=Scope.REQUEST)
+    async def get_project_notification_service(
+        self,
+        project_gateway: ProjectGateway,
+        follow_gateway: UserCategoryFollowGateway,
+        stop_words_gateway: UserStopWordsGateway,
+        price_filter_gateway: UserPriceFilterGateway,
+        project_notification_gateway: ProjectNotificationGateway,
+        channel_notification_gateway: ChannelNotificationGateway,
+        telegram_notifier: TelegramNotifier,
+        transaction_manager: TransactionManager,
+        redis: Redis,
+        config: Config,
+    ) -> ProjectNotificationService:
+        return ProjectNotificationService(
+            project_gateway=project_gateway,
+            follow_gateway=follow_gateway,
+            stop_words_gateway=stop_words_gateway,
+            price_filter_gateway=price_filter_gateway,
+            project_notification_gateway=project_notification_gateway,
+            channel_notification_gateway=channel_notification_gateway,
+            telegram_notifier=telegram_notifier,
+            transaction_manager=transaction_manager,
+            redis=redis,
+            kwork_ref_id=config.kwork.ref_id,
+        )
+
     project_proposal_notification_service = provide(
         ProjectProposalNotificationService,
         scope=Scope.REQUEST,

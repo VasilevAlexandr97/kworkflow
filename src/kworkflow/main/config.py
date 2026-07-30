@@ -53,6 +53,7 @@ class TelegramBotConfig:
 class KworkConfig:
     login: str
     password: str
+    ref_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -112,7 +113,9 @@ def get_config() -> Config:
             telegram_channel_id = None
         else:
             telegram_channel_id = channel_id
-
+    kwork_ref_id = get_optional_env("KWORK_REF_ID")
+    if kwork_ref_id is not None:
+        kwork_ref_id = int(kwork_ref_id)
     return Config(
         postgres=PostgresConfig(
             host=get_required_env("POSTGRES_HOST"),
@@ -132,6 +135,7 @@ def get_config() -> Config:
         kwork=KworkConfig(
             login=get_required_env("KWORK_USERNAME"),
             password=get_required_env("KWORK_PASSWORD"),
+            ref_id=kwork_ref_id,
         ),
         polza=PolzaConfig(
             api_key=get_required_env("POLZA_API_KEY"),
