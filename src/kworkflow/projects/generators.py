@@ -6,6 +6,7 @@ from decimal import Decimal
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
+from kworkflow.common.interfaces.limiter import RateLimiter
 from kworkflow.projects.exceptions import ProjectProposalGenerationError
 
 logger = logging.getLogger(__name__)
@@ -86,8 +87,13 @@ class ProjectProposalGenerator:
 Сгенерируй финальный текст отклика, без пояснений и без повторения инструкций.
 """  # noqa: E501
 
-    def __init__(self, client: AsyncOpenAI):
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        limiter: RateLimiter | None = None,
+    ):
         self.client = client
+        self.limiter = limiter
 
     def build_prompt(self, freelancer_info: str, project_info: str):
         return (
@@ -104,6 +110,8 @@ class ProjectProposalGenerator:
         freelancer_info: str,
         project_info: str,
     ) -> ProjectPropasalResult:
+        if self.limiter:
+            await self.limiter.acquire()
         prompt = self.build_prompt(freelancer_info, project_info)
         completion = await self.client.chat.completions.parse(
             model="anthropic/claude-sonnet-4.6",

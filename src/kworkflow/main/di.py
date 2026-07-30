@@ -37,6 +37,7 @@ from kworkflow.common.interfaces.subscription_checker import (
 )
 from kworkflow.infra.database.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
+from kworkflow.infra.polza.limiter import PolzaRateLimiter
 from kworkflow.infra.taskiq.queue import (
     TaskiqProposalGeneratedNotificationQueue,
     TaskiqProposalGenerationQueue,
@@ -193,15 +194,22 @@ class InfraProvider(Provider):
         await client.close()
 
     @provide(scope=Scope.APP)
-    async def get_yookassa_client(
+    def get_yookassa_rate_limiter(
         self,
         config: Config,
-    ) -> AsyncIterable[YooKassaClient]:
-        limiter = YookassaRateLimiter(
+    ) -> YookassaRateLimiter:
+        return YookassaRateLimiter(
             shop_id=config.yookassa.shop_id,
             redis_uri=config.redis.async_connection_url,
             limit_per_minute=100,
         )
+
+    @provide(scope=Scope.APP)
+    async def get_yookassa_client(
+        self,
+        config: Config,
+        limiter: YookassaRateLimiter,
+    ) -> AsyncIterable[YooKassaClient]:
         client = YooKassaClient(
             shop_id=config.yookassa.shop_id,
             secret_key=config.yookassa.secret_key,
@@ -209,6 +217,16 @@ class InfraProvider(Provider):
         )
         yield client
         await client.close()
+
+    @provide(scope=Scope.APP)
+    def get_polza_rate_limiter(
+        self,
+        config: Config,
+    ) -> PolzaRateLimiter:
+        return PolzaRateLimiter(
+            redis_uri=config.redis.async_connection_url,
+            limit_per_minute=180,
+        )
 
 
 class UserProvider(Provider):
@@ -250,10 +268,15 @@ class ProjectProvider(Provider):
         UserGenerationUsageGateway,
         scope=Scope.REQUEST,
     )
-    project_proposal_generator = provide(
-        ProjectProposalGenerator,
-        scope=Scope.REQUEST,
-    )
+
+    @provide(scope=Scope.REQUEST)
+    async def get_project_proposal_generator(
+        self,
+        client: AsyncOpenAI,
+        limiter: PolzaRateLimiter,
+    ) -> ProjectProposalGenerator:
+        return ProjectProposalGenerator(client=client, limiter=limiter)
+
     project_proposal_request_service = provide(
         ProjectProposalRequestService,
         scope=Scope.REQUEST,

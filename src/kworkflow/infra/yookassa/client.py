@@ -1,4 +1,3 @@
-from kworkflow.common.interfaces.limiter import RateLimiter
 import logging
 
 from base64 import b64encode
@@ -9,6 +8,8 @@ from uuid import uuid4
 import httpx
 
 from pydantic import BaseModel, Field
+
+from kworkflow.common.interfaces.limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ class YooKassaClient:
         self,
         shop_id: str,
         secret_key: str,
-        limiter: RateLimiter,
+        limiter: RateLimiter | None = None,
     ):
         self.limiter = limiter
         self._auth = b64encode(f"{shop_id}:{secret_key}".encode()).decode()
@@ -125,7 +126,8 @@ class YooKassaClient:
         self,
         payment_request: PaymentRequest,
     ) -> PaymentResponse:
-        await self.limiter.acquire()
+        if self.limiter:
+            await self.limiter.acquire()
         payload = payment_request.model_dump(exclude_none=True)
         logger.debug(f"PAYLOAD: {payload}")
         resp = await self._client.post(
@@ -143,7 +145,8 @@ class YooKassaClient:
             raise
 
     async def get_payment(self, payment_id: str) -> PaymentResponse:
-        await self.limiter.acquire()
+        if self.limiter:
+            await self.limiter.acquire()
         resp = await self._client.get(f"/payments/{payment_id}")
         try:
             resp.raise_for_status()
