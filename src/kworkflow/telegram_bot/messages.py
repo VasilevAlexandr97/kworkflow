@@ -18,6 +18,7 @@ def project_message(project: Project, ref_id: int | None = None) -> str:
     project_link = f"https://kwork.ru/projects/{project.external_id}"
     if ref_id is not None:
         project_link += f"?ref={ref_id}"
+    hashtag = f"#{project.category.title.replace(" ", "").lower()}"
     return (
         "🔔 Новый проект\n\n"
         f"📂 {project.category.title}\n\n"
@@ -26,6 +27,7 @@ def project_message(project: Project, ref_id: int | None = None) -> str:
         f"• Желаемый: {project.price} ₽\n"
         f"• Допустимый: {project.possible_price_limit} ₽\n\n"
         f"📝 {project.description}\n\n"
+        f"{hashtag}\n\n"
         f"🔗 <a href='{project_link}'>Ссылка на проект</a>"
     )
 

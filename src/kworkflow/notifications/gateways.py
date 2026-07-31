@@ -39,13 +39,6 @@ class SAChannelNotificationGateway(ChannelNotificationGateway):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def already_sent(self, project_ids: list[UUID]) -> set[UUID]:
-        stmt = select(ChannelNotification.project_id).where(
-            ChannelNotification.project_id.in_(project_ids),
-        )
-        result = await self.session.scalars(stmt)
-        return set(result.all())
-
     async def bulk_insert(
         self,
         notifications: list[ChannelNotification],

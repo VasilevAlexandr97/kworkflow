@@ -276,7 +276,7 @@ def build_project_kbd(project: Project, ref_id: int | None = None):
     )
     builder.row(
         InlineKeyboardButton(
-            text="Проект",
+            text="🔗 Проект",
             url=project_link,
         ),
     )
@@ -284,6 +284,26 @@ def build_project_kbd(project: Project, ref_id: int | None = None):
         InlineKeyboardButton(
             text="🏚 Меню",
             callback_data=MainMenuCB(delete_message=False).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_channel_project_kbd(project: Project, ref_id: int | None = None):
+    project_link = f"https://kwork.ru/projects/{project.external_id}"
+    if ref_id is not None:
+        project_link += f"?ref={ref_id}"
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="🔗 Проект",
+            url=project_link,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🚀 Больше проектов",
+            url="https://t.me/kworkflowbot",
         ),
     )
     return builder.as_markup()

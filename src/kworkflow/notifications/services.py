@@ -26,6 +26,7 @@ from kworkflow.projects.exceptions import ProjectProposalNotFoundError
 from kworkflow.projects.gateways import ProjectProposalGateway
 from kworkflow.projects.interfaces import ProjectGateway
 from kworkflow.telegram_bot.keyboards import (
+    build_channel_project_kbd,
     build_no_active_subscription_kbd,
     build_project_kbd,
     build_subscription_activated_kbd,
@@ -50,6 +51,7 @@ class ProjectNotificationService:
         transaction_manager: TransactionManager,
         redis: Redis,
         kwork_ref_id: int | None = None,
+        channel_id: int | None = None,
     ):
         self.project_gateway = project_gateway
         self.follow_gateway = follow_gateway
@@ -62,6 +64,7 @@ class ProjectNotificationService:
         self.redis = redis
         self.lock = Lock(self.redis, "project_notification", timeout=600)
         self.kwork_ref_id = kwork_ref_id
+        self.channel_id = channel_id
 
     def _contains_stop_word(self, text: str, stop_words: list[str]) -> bool:
         if not stop_words:
@@ -74,13 +77,13 @@ class ProjectNotificationService:
             project_ids,
             with_category=True,
         )
-        logger.info("projects: %s", projects)
+        logger.info(f"NOTIFY NEW PROJECTS: {projects}")
 
         project_notifications = []
 
         async with self.lock:
             for project in projects:
-                if not project.category_id:
+                if project.category_id is None:
                     continue
                 users = (
                     await self.follow_gateway.get_users_followed_to_category(
@@ -128,7 +131,7 @@ class ProjectNotificationService:
                             ProjectNotification(
                                 project_id=project.id,
                                 user_id=user.id,
-                                sent_at=datetime.now(tz=UTC),
+                                sent_at=datetime.now(UTC),
                             ),
                         )
                     except Exception:
@@ -141,22 +144,35 @@ class ProjectNotificationService:
             )
             await self.transaction_manager.commit()
 
-    async def notify_high_value_projects_channel(self, channel_id: int):
-        projects = await self.project_gateway.get_recent_projects_by_min_price(
-            min_price=30000,
-            limit=10,
+    async def notify_new_projects_to_channel(
+        self,
+        project_ids: list[UUID],
+    ):
+        if self.channel_id is None:
+            logger.warning("TELEGRAM_CHANNEL_ID not configured")
+            return
+        min_price = 30000
+        projects = await self.project_gateway.get_projects_by_ids(
+            project_ids=project_ids,
+            with_category=True,
         )
-        already_sent = await self.channel_notification_gateway.already_sent(
-            [p.id for p in projects],
-        )
-        new_projects = [p for p in projects if p.id not in already_sent]
-        logger.info(f"HIGH VALUE PROJECTS: {new_projects}")
+        high_value_projects = [pr for pr in projects if pr.price >= min_price]
+        logger.info(f"NOTIFY NEW PROJECTS TO CHANNEL: {high_value_projects}")
         channel_notifications = []
-        for project in new_projects:
+        for project in high_value_projects:
+            if project.category_id is None:
+                continue
             try:
                 await self.telegram_notifier.send_message(
-                    chat_id=channel_id,
-                    text=project_message(project, ref_id=self.kwork_ref_id),
+                    chat_id=self.channel_id,
+                    text=project_message(
+                        project=project,
+                        ref_id=self.kwork_ref_id,
+                    ),
+                    keyboard=build_channel_project_kbd(
+                        project=project,
+                        ref_id=self.kwork_ref_id,
+                    ),
                 )
                 channel_notifications.append(
                     ChannelNotification(
@@ -166,7 +182,7 @@ class ProjectNotificationService:
                 )
             except Exception:
                 logger.exception(
-                    f"Failed to send message to channel: {channel_id}",
+                    f"Failed to send message to channel: {self.channel_id}",
                 )
         if channel_notifications:
             await self.channel_notification_gateway.bulk_insert(

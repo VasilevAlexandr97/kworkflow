@@ -33,20 +33,7 @@ async def monitoring_new_projects(
     logger.info(f"NEW PROJECTS: {new_projects}")
     if new_projects:
         await notify_new_projects.kiq(new_projects)
-
-
-@broker.task(schedule=[{"cron": "*/10 * * * *"}])
-@inject
-async def notify_high_value_projects_to_channel(
-    service: FromDishka[ProjectNotificationService],
-    config: FromDishka[Config],
-):
-    if config.telegram_channel_id is None:
-        logger.warning("TELEGRAM_CHANNEL_ID not configured")
-        return
-    await service.notify_high_value_projects_channel(
-        channel_id=config.telegram_channel_id,
-    )
+        await notify_new_projects_to_channel.kiq(new_projects)
 
 
 @broker.task()
@@ -56,6 +43,17 @@ async def notify_new_projects(
     service: FromDishka[ProjectNotificationService],
 ):
     await service.notify_new_projects(new_projects)
+
+
+@broker.task()
+@inject
+async def notify_new_projects_to_channel(
+    new_projects: list[UUID],
+    service: FromDishka[ProjectNotificationService],
+):
+    await service.notify_new_projects_to_channel(
+        project_ids=new_projects,
+    )
 
 
 @broker.task()

@@ -372,6 +372,7 @@ class NotificationProvider(Provider):
             transaction_manager=transaction_manager,
             redis=redis,
             kwork_ref_id=config.kwork.ref_id,
+            channel_id=config.telegram_channel_id,
         )
 
     project_proposal_notification_service = provide(

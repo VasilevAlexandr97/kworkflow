@@ -53,10 +53,6 @@ class ProjectNotificationGateway:
 
 class ChannelNotificationGateway:
     @abstractmethod
-    async def already_sent(self, project_ids: list[UUID]) -> set[UUID]:
-        raise NotImplementedError
-
-    @abstractmethod
     async def bulk_insert(
         self,
         notifications: list[ChannelNotification],

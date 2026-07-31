@@ -29,14 +29,6 @@ class ProjectGateway(Protocol):
     async def get_by_id(self, project_id: UUID) -> Project | None:
         raise NotImplementedError
 
-    @abstractmethod
-    async def get_recent_projects_by_min_price(
-        self,
-        min_price: int = 30000,
-        limit: int = 10,
-    ) -> list[Project]:
-        raise NotImplementedError
-
 
 class ProposalGenerationQueue(Protocol):
     @abstractmethod

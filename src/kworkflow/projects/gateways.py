@@ -94,6 +94,8 @@ class SAProjectGateway(ProjectGateway):
         project_ids: list[UUID],
         with_category: bool = False,
     ) -> list[Project]:
+        if not project_ids:
+            return []
         stmt = select(Project).where(Project.id.in_(project_ids))
         if with_category:
             stmt = stmt.options(selectinload(Project.category))
@@ -103,22 +105,6 @@ class SAProjectGateway(ProjectGateway):
     async def get_by_id(self, project_id: UUID) -> Project | None:
         stmt = select(Project).where(Project.id == project_id)
         return await self.session.scalar(stmt)
-
-    async def get_recent_projects_by_min_price(
-        self,
-        min_price: int = 30000,
-        limit: int = 10,
-    ) -> list[Project]:
-        stmt = (
-            select(Project)
-            .where(
-                Project.price >= min_price,
-            )
-            .options(selectinload(Project.category))
-            .order_by(Project.created_at.desc())
-            .limit(limit)
-        )
-        return list(await self.session.scalars(stmt))
 
 
 class ProjectProposalRequestGateway:
