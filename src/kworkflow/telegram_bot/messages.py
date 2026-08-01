@@ -18,7 +18,7 @@ def project_message(project: Project, ref_id: int | None = None) -> str:
     project_link = f"https://kwork.ru/projects/{project.external_id}"
     if ref_id is not None:
         project_link += f"?ref={ref_id}"
-    hashtag = f"#{project.category.title.replace(" ", "").lower()}"
+    hashtag = f"#{project.category.title.replace(' ', '').lower()}"
     return (
         "🔔 Новый проект\n\n"
         f"📂 {project.category.title}\n\n"
@@ -353,3 +353,17 @@ def antiflood_message() -> str:
 
 def try_again_later_message() -> str:
     return "⚠️ Попробуйте позже"
+
+
+def about_project_message() -> str:
+    # TODO: хардкод ссылок
+    return (
+        "ℹ️ <b>KworkFlow</b>\n\n"
+        "📊 Отслеживаю новые проекты на Kwork и "
+        "помогаю генерировать отклики через нейросеть.\n\n"
+        "🔗 <b>Полезные ссылки:</b>\n\n"
+        "🌐 Сайт — <a href='https://kworkflow.ru'>kworkflow.ru</a>\n\n"
+        "🆘 Поддержка — @askanonagent\n\n"
+        "📢 Канал с проектами — https://t.me/freelance_pr_feed\n\n"
+        "💬 Остались вопросы? Пиши в саппорт!"
+    )

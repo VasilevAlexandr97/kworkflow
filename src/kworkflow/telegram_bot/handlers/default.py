@@ -9,10 +9,15 @@ from kworkflow.common.dto import CurrentUser
 from kworkflow.preferences.services import UserCategoryFollowService
 from kworkflow.telegram_bot.keyboards import (
     MainMenuCB,
+    build_about_project_kbd,
     build_main_menu_kbd,
     build_start_kbd,
 )
-from kworkflow.telegram_bot.messages import menu_message, start_message
+from kworkflow.telegram_bot.messages import (
+    about_project_message,
+    menu_message,
+    start_message,
+)
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -85,5 +90,17 @@ async def main_menu_cb_handler(
     if callback_data.delete_message:
         await call.message.delete()
     await call.message.answer(text, reply_markup=keyboard)
+    await state.clear()
+    await call.answer()
+
+
+@router.callback_query(F.data == "about_project")
+async def about_project_handler(
+    call: types.CallbackQuery,
+    state: FSMContext,
+):
+    text = about_project_message()
+    keyboard = build_about_project_kbd()
+    await call.message.edit_text(text, reply_markup=keyboard)
     await state.clear()
     await call.answer()

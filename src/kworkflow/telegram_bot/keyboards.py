@@ -10,7 +10,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from kworkflow.preferences.dto import CategoryWithFollowedStatusDTO
-from kworkflow.projects.models import ProjectCategory, Project
+from kworkflow.projects.models import Project, ProjectCategory
 from kworkflow.subscriptions.models import PlanSlug
 
 
@@ -67,6 +67,12 @@ def build_main_menu_kbd(is_pro: bool = False, is_admin: bool = False):
         InlineKeyboardButton(
             text="💰 Фильтр цен",
             callback_data="price_filter_menu",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="ℹ️ О проекте",
+            callback_data="about_project",
         ),
     )
     if not is_admin:
@@ -438,6 +444,34 @@ def build_try_again_later_kbd():
         InlineKeyboardButton(
             text="🏚 Меню",
             callback_data=MainMenuCB(delete_message=True).pack(),
+        ),
+    )
+    return builder.as_markup()
+
+
+def build_about_project_kbd():
+    # TODO: хардкод ссылок
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="📢 Канал",
+            url="https://t.me/freelance_pr_feed",
+        ),
+        InlineKeyboardButton(
+            text="🌐 Сайт",
+            url="https://kworkflow.ru",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🆘 Поддержка",
+            url="https://t.me/askanonagent",
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏚 Меню",
+            callback_data=MainMenuCB(delete_message=False).pack(),
         ),
     )
     return builder.as_markup()
