@@ -35,9 +35,7 @@ class TelegramAuth:
         self.id_provider = id_provider
         self.transaction_manager = transaction_manager
 
-    async def auth(
-        self,
-    ) -> TelegramAuthResultDTO:
+    async def auth(self) -> TelegramAuthResultDTO:
         try:
             user = await self.id_provider.get_current_user()
             return TelegramAuthResultDTO(
@@ -70,10 +68,13 @@ class TelegramAuth:
         except UserAlreadyExistsError:
             await self.transaction_manager.rollback()
             logger.info(f"User already exists: {new_user!r}")
-            user = await self.user_gateway.get_by_telegram_id(telegram_id)
-            if user is None:
-                raise CreateUserError
-            return TelegramAuthResultDTO(user_id=user.id, is_new=False)
+            user = await self.id_provider.get_current_user()
+            return TelegramAuthResultDTO(
+                user_id=user.id,
+                is_new=False,
+                is_pro=user.is_pro,
+                is_admin=user.is_admin,
+            )
         except CreateUserError:
             await self.transaction_manager.rollback()
             logger.info(f"User not created: {new_user!r}")
