@@ -105,7 +105,7 @@ async def create_payment(
         await call.message.edit_text(text, reply_markup=keyboard)
 
 
-@router.message(PaymentState.set_email)
+@router.message(PaymentState.set_email, F.text)
 @inject
 async def set_payment_email(
     message: types.Message,

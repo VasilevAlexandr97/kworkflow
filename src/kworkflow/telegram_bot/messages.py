@@ -371,3 +371,17 @@ def about_project_message() -> str:
         "📢 Канал с проектами — https://t.me/freelance_pr_feed\n\n"
         "💬 Остались вопросы? Пиши в саппорт!"
     )
+
+
+def error_message() -> str:
+    # TODO: хардкод админа
+    return (
+        "😔 Произошла непредвиденная ошибка.\n\n"
+        "Попробуйте еще раз немного позже. "
+        "Если ошибка повторяется, сообщите администратору "
+        "@askanonagent"
+    )
+
+
+def error_callback_message() -> str:
+    return "😔 Произошла непредвиденная ошибка."

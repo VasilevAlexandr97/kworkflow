@@ -1,10 +1,10 @@
-from kworkflow.projects.exceptions import GenerationLimitExceededError
 from aiogram import F, Router, types
 from aiogram.enums import ChatType
 from dishka.integrations.aiogram import FromDishka, inject
 
 from kworkflow.preferences.exceptions import UserFreelancerProfileNotFoundError
 from kworkflow.projects.dto import ProjectProposalGenerationRequestStatus
+from kworkflow.projects.exceptions import GenerationLimitExceededError
 from kworkflow.projects.services import (
     ProjectProposalRequestService,
 )
@@ -15,8 +15,8 @@ from kworkflow.telegram_bot.keyboards import (
 from kworkflow.telegram_bot.messages import (
     already_generating_proposal_message,
     generating_proposal_message,
-    profile_not_set_message,
     generation_limit_exceeded_message,
+    profile_not_set_message,
 )
 
 router = Router()
@@ -52,6 +52,8 @@ async def generate_proposal_request(
             and result.generated_text
         ):
             await call.message.answer(result.generated_text)
+            await call.answer()
+        else:
             await call.answer()
     except UserFreelancerProfileNotFoundError:
         text = profile_not_set_message()

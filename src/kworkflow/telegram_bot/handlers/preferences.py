@@ -73,8 +73,6 @@ async def start_configure_followed_categories(
     service: FromDishka[ProjectCategoryService],
 ):
     root_categories = await service.get_root_categories()
-    if not root_categories:
-        pass
     text = select_followed_categories_message()
     keyboard = build_followed_categories_kbd(root_categories)
     await call.message.edit_text(text, reply_markup=keyboard)
@@ -242,7 +240,7 @@ async def start_add_stop_words(
         await call.message.edit_text(text, reply_markup=keyboard)
 
 
-@router.message(StopWordsState.add)
+@router.message(StopWordsState.add, F.text)
 @inject
 async def add_stop_words(
     message: types.Message,
@@ -282,7 +280,7 @@ async def start_delete_stop_words(
         await call.message.edit_text(text, reply_markup=keyboard)
 
 
-@router.message(StopWordsState.delete)
+@router.message(StopWordsState.delete, F.text)
 @inject
 async def delete_stop_words(
     message: types.Message,

@@ -11,6 +11,7 @@ from redis.asyncio.client import Redis
 from kworkflow.main.config import Config, config
 from kworkflow.main.di import TelegramBotProvider, create_container
 from kworkflow.telegram_bot.handlers.default import router as default_router
+from kworkflow.telegram_bot.handlers.errors import global_error_handler
 from kworkflow.telegram_bot.handlers.preferences import (
     router as preferences_router,
 )
@@ -45,6 +46,7 @@ def setup_handlers(dp: Dispatcher):
     dp.include_router(preferences_router)
     dp.include_router(projects_router)
     dp.include_router(subscriptions_router)
+    dp.errors.register(global_error_handler)
 
 
 async def get_dispatcher() -> Dispatcher:
