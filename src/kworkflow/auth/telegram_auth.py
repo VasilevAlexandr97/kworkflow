@@ -5,16 +5,16 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
 from kworkflow.auth.exceptions import AuthenticationError
-from kworkflow.auth.id_provider import IdProvider
-from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.users.exceptions import CreateUserError, UserAlreadyExistsError
-from kworkflow.users.gateways import UserGateway, UserRoleGateway
+from kworkflow.users.interfaces import UserGateway, UserRoleGateway
 from kworkflow.users.models import Role, User, UserRole
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class TelegramAuthResultDTO:
     user_id: UUID
     is_new: bool

@@ -12,16 +12,17 @@ from kworkflow.users.exceptions import (
     UserRoleCreationError,
     UserRoleNotFoundError,
 )
+from kworkflow.users.interfaces import UserGateway, UserRoleGateway
 from kworkflow.users.models import Role, User, UserRole
 
 logger = logging.getLogger(__name__)
 
 
-class UserGateway:
+class SAUserGateway(UserGateway):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add(self, new_user: User):
+    async def add(self, new_user: User) -> None:
         try:
             self.session.add(new_user)
             await self.session.flush()
@@ -46,11 +47,11 @@ class UserGateway:
         return await self.session.scalar(stmt)
 
 
-class UserRoleGateway:
+class SAUserRoleGateway(UserRoleGateway):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add(self, new_role: UserRole):
+    async def add(self, new_role: UserRole) -> None:
         try:
             self.session.add(new_role)
             await self.session.flush()

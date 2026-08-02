@@ -6,7 +6,6 @@ from uuid import UUID
 from dishka.integrations.taskiq import FromDishka, inject
 
 from kworkflow.infra.taskiq.broker import broker
-from kworkflow.main.config import Config
 from kworkflow.notifications.services import (
     ProjectNotificationService,
     ProjectProposalNotificationService,
@@ -77,6 +76,15 @@ async def notify_project_proposal_generated_task(
     service: FromDishka[ProjectProposalNotificationService],
 ):
     await service.notify_generated(user_id=user_id, project_id=project_id)
+
+
+@broker.task()
+@inject
+async def notify_project_proposal_generated_failed_task(
+    user_id: UUID,
+    service: FromDishka[ProjectProposalNotificationService],
+):
+    await service.notify_generated_failed(user_id=user_id)
 
 
 @broker.task(schedule=[{"cron": "* * * * *"}])

@@ -11,7 +11,11 @@ from kworkflow.notifications.models import (
 
 class ProposalGeneratedNotificationQueue(Protocol):
     @abstractmethod
-    async def enqueue(self, user_id: UUID, project_id: UUID) -> None:
+    async def enqueue_succeeded(self, user_id: UUID, project_id: UUID) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def enqueue_failed(self, user_id: UUID) -> None:
         raise NotImplementedError
 
 

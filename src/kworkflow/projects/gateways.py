@@ -6,7 +6,10 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from kworkflow.projects.interfaces import ProjectGateway
+from kworkflow.projects.interfaces import (
+    ProjectGateway,
+    UserGenerationUsageGateway,
+)
 from kworkflow.projects.models import (
     Project,
     ProjectCategory,
@@ -237,7 +240,7 @@ class ProjectProposalGateway:
         return await self.session.scalar(stmt)
 
 
-class UserGenerationUsageGateway:
+class SAUserGenerationUsageGateway(UserGenerationUsageGateway):
     def __init__(self, session: AsyncSession):
         self.session = session
 

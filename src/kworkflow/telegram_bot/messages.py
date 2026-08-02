@@ -219,6 +219,10 @@ def generating_proposal_message() -> str:
     return "🔄 Генерирую"
 
 
+def generating_proposal_failed_message() -> str:
+    return "😔 Не удалось сгенерировать отклик"
+
+
 def already_generating_proposal_message() -> str:
     return "⏳ Уже генерирую"
 

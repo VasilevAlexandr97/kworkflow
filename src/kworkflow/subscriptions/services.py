@@ -9,8 +9,8 @@ from redis.asyncio import Redis
 from redis.asyncio.lock import Lock
 from redis.exceptions import LockError
 
-from kworkflow.auth.id_provider import IdProvider
-from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.infra.yookassa.client import (
     AmountData,
     ConfirmationRedirectData,
@@ -27,16 +27,16 @@ from kworkflow.notifications.interfaces import (
     SubscriptionActivatedNotificationQueue,
     SubscriptionRenewalNotificationQueue,
 )
-from kworkflow.subscriptions.dto import SubscriptionInfoDTO, PlanForUserDTO
+from kworkflow.subscriptions.dto import PlanForUserDTO, SubscriptionInfoDTO
 from kworkflow.subscriptions.exceptions import (
     ActiveSubscriptionExistsError,
+    PaymentAlreadyPaidError,
     PaymentEmailNotFoundError,
     PaymentEmailRequiredError,
     PaymentMethodNotFoundError,
     ServiceTemporarilyUnavailableError,
     SubscriptionAlreadyCancelledError,
     SubscriptionPlanNotFoundError,
-    PaymentAlreadyPaidError,
 )
 from kworkflow.subscriptions.gateways import (
     PaymentGateway,

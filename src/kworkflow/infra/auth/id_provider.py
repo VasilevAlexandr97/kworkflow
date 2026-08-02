@@ -1,16 +1,16 @@
+import logging
+
 from uuid import UUID
 
 from kworkflow.auth.exceptions import AuthenticationError
 from kworkflow.common.dto import CurrentUser
 from kworkflow.common.interfaces.id_provider import IdProvider
-from kworkflow.common.interfaces.subscription_checker import (
-    SubscriptionChecker,
-)
-from kworkflow.users.gateways import UserGateway, UserRoleGateway
+from kworkflow.subscriptions.interfaces import SubscriptionChecker
+from kworkflow.users.interfaces import UserGateway, UserRoleGateway
 from kworkflow.users.models import Role
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 class TelegramIdProvider(IdProvider):
     def __init__(

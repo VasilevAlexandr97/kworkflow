@@ -11,7 +11,6 @@ from dishka import (
     provide,
 )
 from fastapi.templating import Jinja2Templates
-from openai import AsyncOpenAI
 from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -20,23 +19,20 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from kworkflow.auth.id_provider import (
+from kworkflow.auth.telegram_auth import TelegramAuth
+from kworkflow.common.dto import CurrentUser
+from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.common.interfaces.llm_client import LLMClient
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
+from kworkflow.infra.auth.id_provider import (
     AdminPanelIdProvider,
-    IdProvider,
     TelegramIdProvider,
     WebIdProvider,
     WorkerIdProvider,
 )
-from kworkflow.auth.telegram_auth import TelegramAuth
-from kworkflow.common.dto import CurrentUser
-from kworkflow.common.interfaces.generation_limit_checker import (
-    GenerationLimitChecker,
-)
-from kworkflow.common.interfaces.subscription_checker import (
-    SubscriptionChecker,
-)
-from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.infra.database.transaction_manager import SATransactionManager
 from kworkflow.infra.kwork.client import KworkClient
+from kworkflow.infra.polza.client import PolzaClient
 from kworkflow.infra.polza.limiter import PolzaRateLimiter
 from kworkflow.infra.taskiq.queue import (
     TaskiqProposalGeneratedNotificationQueue,
@@ -85,10 +81,12 @@ from kworkflow.projects.gateways import (
     ProjectProposalGateway,
     ProjectProposalRequestGateway,
     SAProjectGateway,
+    SAUserGenerationUsageGateway,
     UserGenerationUsageGateway,
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import (
+    GenerationLimitChecker,
     ProjectGateway,
     ProposalGenerationQueue,
 )
@@ -107,7 +105,10 @@ from kworkflow.subscriptions.gateways import (
     SubscriptionGateway,
     SubscriptionPlanGateway,
 )
-from kworkflow.subscriptions.interfaces import SubscriptionLimitsResetter
+from kworkflow.subscriptions.interfaces import (
+    SubscriptionChecker,
+    SubscriptionLimitsResetter,
+)
 from kworkflow.subscriptions.limits_resetter import (
     SubscriptionLimitsResetterImpl,
 )
@@ -117,7 +118,11 @@ from kworkflow.subscriptions.services import (
     SubscriptionPaymentService,
     SubscriptionRenewalService,
 )
-from kworkflow.users.gateways import UserGateway, UserRoleGateway
+from kworkflow.users.gateways import (
+    SAUserGateway,
+    SAUserRoleGateway,
+)
+from kworkflow.users.interfaces import UserGateway, UserRoleGateway
 
 
 class InfraProvider(Provider):
@@ -146,7 +151,12 @@ class InfraProvider(Provider):
         async with session_maker() as session:
             yield session
 
-    transaction_manager = provide(TransactionManager, scope=Scope.REQUEST)
+    @provide(scope=Scope.REQUEST, provides=TransactionManager)
+    def get_transaction_manager(
+        self,
+        session: AsyncSession,
+    ) -> SATransactionManager:
+        return SATransactionManager(session)
 
     @provide(scope=Scope.APP)
     def get_redis_pool(self, config: Config) -> ConnectionPool:
@@ -180,18 +190,6 @@ class InfraProvider(Provider):
     @provide(scope=Scope.APP)
     def get_telegram_notifier(self, bot: Bot) -> TelegramNotifier:
         return TelegramNotifier(bot=bot)
-
-    @provide(scope=Scope.APP)
-    async def get_async_openai_client(
-        self,
-        config: Config,
-    ) -> AsyncIterable[AsyncOpenAI]:
-        client = AsyncOpenAI(
-            api_key=config.polza.api_key,
-            base_url=config.polza.base_url,
-        )
-        yield client
-        await client.close()
 
     @provide(scope=Scope.APP)
     def get_yookassa_rate_limiter(
@@ -228,10 +226,32 @@ class InfraProvider(Provider):
             limit_per_minute=180,
         )
 
+    @provide(scope=Scope.APP, provides=LLMClient)
+    async def get_polza_client(
+        self,
+        config: Config,
+        limiter: PolzaRateLimiter,
+    ) -> AsyncIterable[PolzaClient]:
+        client = PolzaClient(
+            api_key=config.polza.api_key,
+            base_url=config.polza.base_url,
+            limiter=limiter,
+        )
+        yield client
+        await client.close()
+
 
 class UserProvider(Provider):
-    user_gateway = provide(UserGateway, scope=Scope.REQUEST)
-    user_role_gateway = provide(UserRoleGateway, scope=Scope.REQUEST)
+    user_gateway = provide(
+        SAUserGateway,
+        scope=Scope.REQUEST,
+        provides=UserGateway,
+    )
+    user_role_gateway = provide(
+        SAUserRoleGateway,
+        scope=Scope.REQUEST,
+        provides=UserRoleGateway,
+    )
 
     @provide(scope=Scope.REQUEST)
     async def get_current_user(self, id_provider: IdProvider) -> CurrentUser:
@@ -265,17 +285,17 @@ class ProjectProvider(Provider):
         scope=Scope.REQUEST,
     )
     user_generation_usage_gateway = provide(
-        UserGenerationUsageGateway,
+        SAUserGenerationUsageGateway,
         scope=Scope.REQUEST,
+        provides=UserGenerationUsageGateway,
     )
 
     @provide(scope=Scope.REQUEST)
     async def get_project_proposal_generator(
         self,
-        client: AsyncOpenAI,
-        limiter: PolzaRateLimiter,
+        client: LLMClient,
     ) -> ProjectProposalGenerator:
-        return ProjectProposalGenerator(client=client, limiter=limiter)
+        return ProjectProposalGenerator(client)
 
     project_proposal_request_service = provide(
         ProjectProposalRequestService,

@@ -6,14 +6,8 @@ import traceback
 from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
-from kworkflow.auth.id_provider import IdProvider
-from kworkflow.common.interfaces.generation_limit_checker import (
-    GenerationLimitChecker,
-)
-from kworkflow.common.interfaces.subscription_checker import (
-    SubscriptionChecker,
-)
-from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.notifications.interfaces import (
     ProposalGeneratedNotificationQueue,
@@ -37,6 +31,7 @@ from kworkflow.projects.gateways import (
 )
 from kworkflow.projects.generators import ProjectProposalGenerator
 from kworkflow.projects.interfaces import (
+    GenerationLimitChecker,
     ProjectGateway,
     ProposalGenerationQueue,
 )
@@ -47,6 +42,7 @@ from kworkflow.projects.models import (
     ProjectProposalRequest,
     ProjectProposalRequestStatus,
 )
+from kworkflow.subscriptions.interfaces import SubscriptionChecker
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +335,7 @@ class ProjectProposalGenerationService:
                 project_id=project_id,
             )
             if project_proposal:
-                await self.notify_queue.enqueue(
+                await self.notify_queue.enqueue_succeeded(
                     user_id=user_id,
                     project_id=project_id,
                 )
@@ -383,7 +379,7 @@ class ProjectProposalGenerationService:
             await self.project_proposal_gateway.add(project_proposal)
             await self.transaction_manager.commit()
             # TODO: Что если упадет enqueue или сам таск, продумать
-            await self.notify_queue.enqueue(
+            await self.notify_queue.enqueue_succeeded(
                 user_id=user_id,
                 project_id=project_id,
             )
@@ -400,6 +396,7 @@ class ProjectProposalGenerationService:
                 project_id=project_id,
                 error_text=error_text,
             )
+            await self.notify_queue.enqueue_failed(user_id)
             raise
         except Exception:
             error_text = traceback.format_exc()

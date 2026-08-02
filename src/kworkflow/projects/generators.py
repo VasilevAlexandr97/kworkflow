@@ -3,10 +3,13 @@ import logging
 from dataclasses import dataclass
 from decimal import Decimal
 
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-from kworkflow.common.interfaces.limiter import RateLimiter
+from kworkflow.common.interfaces.llm_client import (
+    LLMClient,
+    LLMClientError,
+    LLMInsufficientBalanceError,
+)
 from kworkflow.projects.exceptions import ProjectProposalGenerationError
 
 logger = logging.getLogger(__name__)
@@ -89,11 +92,9 @@ class ProjectProposalGenerator:
 
     def __init__(
         self,
-        client: AsyncOpenAI,
-        limiter: RateLimiter | None = None,
+        client: LLMClient,
     ):
         self.client = client
-        self.limiter = limiter
 
     def build_prompt(self, freelancer_info: str, project_info: str):
         return (
@@ -110,36 +111,29 @@ class ProjectProposalGenerator:
         freelancer_info: str,
         project_info: str,
     ) -> ProjectPropasalResult:
-        if self.limiter:
-            await self.limiter.acquire()
         prompt = self.build_prompt(freelancer_info, project_info)
-        completion = await self.client.chat.completions.parse(
-            model="anthropic/claude-sonnet-4.6",
-            messages=[
-                {
-                    "role": "system",
-                    "content": self.SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ],
-            response_format=ProjectProposalResponse,
-            max_tokens=8192,
-        )
-        prompt_tokens = getattr(completion.usage, "prompt_tokens", 0)
-        completion_tokens = getattr(completion.usage, "completion_tokens", 0)
-        total_tokens = getattr(completion.usage, "total_tokens", 0)
-        cost = Decimal(getattr(completion.usage, "cost_rub", 0))
-        result = completion.choices[0].message.parsed
-        if result is None:
-            raise ProjectProposalGenerationError
+        try:
+            result = await self.client.generate(
+                system_prompt=self.SYSTEM_PROMPT,
+                user_prompt=prompt,
+                response_format=ProjectProposalResponse,
+                max_tokens=8192,
+            )
+        except LLMInsufficientBalanceError as exc:
+            logger.warning("insufficient balance")
+            raise ProjectProposalGenerationError(
+                f"LLM insufficient balance: {exc}",
+            ) from exc
+        except LLMClientError as exc:
+            logger.exception("LLM generation Error")
+            raise ProjectProposalGenerationError(
+                f"LLM request failed: {exc}",
+            ) from exc
         return ProjectPropasalResult(
-            text=result.text,
+            text=result.parsed.text,
             prompt=f"{self.SYSTEM_PROMPT}\n\n{prompt}",
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
-            cost=cost,
+            prompt_tokens=result.usage.prompt_tokens,
+            completion_tokens=result.usage.completion_tokens,
+            total_tokens=result.usage.total_tokens,
+            cost=result.usage.cost,
         )

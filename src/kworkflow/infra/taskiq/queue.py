@@ -3,6 +3,7 @@ from uuid import UUID
 
 from kworkflow.background_tasks.tasks import (
     generate_project_proposal_task,
+    notify_project_proposal_generated_failed_task,
     notify_project_proposal_generated_task,
     notify_subscription_activated,
     notify_subscription_renewed,
@@ -30,11 +31,14 @@ class TaskiqProposalGenerationQueue(ProposalGenerationQueue):
 class TaskiqProposalGeneratedNotificationQueue(
     ProposalGeneratedNotificationQueue,
 ):
-    async def enqueue(self, user_id: UUID, project_id: UUID) -> None:
+    async def enqueue_succeeded(self, user_id: UUID, project_id: UUID) -> None:
         await notify_project_proposal_generated_task.kiq(
             user_id=user_id,
             project_id=project_id,
         )
+
+    async def enqueue_failed(self, user_id: UUID) -> None:
+        await notify_project_proposal_generated_failed_task.kiq(user_id)
 
 
 class TaskiqSubscriptionActivatedNotificationQueue(

@@ -7,7 +7,7 @@ from uuid import UUID
 from redis.asyncio.client import Redis
 from redis.asyncio.lock import Lock
 
-from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.infra.telegram.telegram_notifier import TelegramNotifier
 from kworkflow.notifications.interfaces import (
     ChannelNotificationGateway,
@@ -31,9 +31,12 @@ from kworkflow.telegram_bot.keyboards import (
     build_project_kbd,
     build_subscription_activated_kbd,
 )
-from kworkflow.telegram_bot.messages import project_message
+from kworkflow.telegram_bot.messages import (
+    generating_proposal_failed_message,
+    project_message,
+)
 from kworkflow.users.exceptions import UserNotFoundError
-from kworkflow.users.gateways import UserGateway
+from kworkflow.users.interfaces import UserGateway
 
 logger = logging.getLogger(__name__)
 
@@ -194,9 +197,11 @@ class ProjectNotificationService:
 class ProjectProposalNotificationService:
     def __init__(
         self,
+        user_gateway: UserGateway,
         proposal_gateway: ProjectProposalGateway,
         telegram_notifier: TelegramNotifier,
     ):
+        self.user_gateway = user_gateway
         self.proposal_gateway = proposal_gateway
         self.telegram_notifier = telegram_notifier
 
@@ -214,6 +219,15 @@ class ProjectProposalNotificationService:
         await self.telegram_notifier.send_message(
             chat_id=proposal.user.telegram_id,
             text=proposal.generated_text,
+        )
+
+    async def notify_generated_failed(self, user_id: UUID):
+        user = await self.user_gateway.get_by_id(user_id)
+        if user is None:
+            return
+        await self.telegram_notifier.send_message(
+            chat_id=user.telegram_id,
+            text=generating_proposal_failed_message(),
         )
 
 

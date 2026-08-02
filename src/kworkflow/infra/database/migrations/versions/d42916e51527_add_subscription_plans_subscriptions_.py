@@ -93,7 +93,7 @@ def upgrade() -> None:
                 "id": uuid7(), 
                 "name": "PRO Monthly", 
                 "slug": PlanSlug.PRO_MONTHLY,
-                "price_rub": 499, 
+                "price_rub": 349, 
                 "duration_days": 30, 
                 "is_active": True, 
                 "created_at": now, 

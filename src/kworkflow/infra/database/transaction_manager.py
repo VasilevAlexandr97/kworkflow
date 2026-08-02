@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
 
-class TransactionManager:
+
+class SATransactionManager(TransactionManager):
     def __init__(self, session: AsyncSession):
         self.session = session
 

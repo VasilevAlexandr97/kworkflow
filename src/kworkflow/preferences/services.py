@@ -3,11 +3,8 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-from kworkflow.auth.id_provider import IdProvider
-from kworkflow.common.interfaces.subscription_checker import (
-    SubscriptionChecker,
-)
-from kworkflow.infra.database.transaction_manager import TransactionManager
+from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.preferences.consts import (
     MAX_FREE_CATEGORIES,
     MAX_FREE_STOP_WORDS,
@@ -47,6 +44,9 @@ from kworkflow.preferences.validators import (
 )
 from kworkflow.projects.exceptions import ProjectCategoryNotFoundError
 from kworkflow.projects.models import ProjectCategory
+from kworkflow.subscriptions.interfaces import (
+    SubscriptionChecker,
+)
 
 logger = logging.getLogger(__name__)
 
