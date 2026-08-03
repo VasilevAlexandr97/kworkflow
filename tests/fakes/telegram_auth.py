@@ -1,0 +1,16 @@
+from uuid import uuid7
+
+from kworkflow.auth.telegram_auth import TelegramAuthResultDTO
+
+
+class FakeTelegramAuth:
+    def __init__(self, is_new: bool = True) -> None:
+        self.result = TelegramAuthResultDTO(
+            user_id=uuid7(),
+            is_new=is_new,
+            is_pro=False,
+            is_admin=False,
+        )
+
+    async def auth(self) -> TelegramAuthResultDTO:
+        return self.result

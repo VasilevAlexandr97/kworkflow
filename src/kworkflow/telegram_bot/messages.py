@@ -54,7 +54,7 @@ def menu_message(follow_categories: list[ProjectCategory]) -> str:
         "🏠 <b>Главное меню KworkFlow</b>\n\n"
         "⚡ <b>KworkFlow</b> отслеживает новые проекты на бирже <b>Kwork</b> "
         "и присылает подходящие задания автоматически.\n\n"
-        "<b>📂 Отслеживаемые категории:\n</b>"
+        "<b>📂 Отслеживаемые категории:</b>\n"
         f"{follow_categories_str}\n\n"
         "⚙️ Используйте меню ниже для управления настройками"
     )
