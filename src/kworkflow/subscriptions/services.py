@@ -9,7 +9,7 @@ from redis.asyncio import Redis
 from redis.asyncio.lock import Lock
 from redis.exceptions import LockError
 
-from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.auth.interfaces import IdProvider
 from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.infra.yookassa.client import (
     AmountData,

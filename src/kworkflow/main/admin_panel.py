@@ -4,21 +4,25 @@ from contextlib import asynccontextmanager
 
 from aiogram import Bot
 from dishka import AsyncContainer
-from dishka.integrations.fastapi import setup_dishka
+from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette_admin.contrib.sqla import Admin
 
-# from kworkflow.admin_panel.auth import AdminPanelAuthProvider
+from kworkflow.admin_panel.auth import AdminPanelAuthProvider
 from kworkflow.admin_panel.views.projects import (
     ProjectProposalView,
     ProjectView,
 )
 from kworkflow.admin_panel.views.users import UserView
 from kworkflow.main.config import Config, get_config
-from kworkflow.main.di import AdminPanelProvider, create_container
+from kworkflow.main.di import (
+    AdminPanelProvider,
+    AuthProvider,
+    create_container,
+)
 from kworkflow.projects.models import Project, ProjectProposal
 from kworkflow.users.models import User
 
@@ -35,7 +39,7 @@ def setup_admin(engine: AsyncEngine, app: FastAPI, config: Config):
     admin = Admin(
         engine=engine,
         debug=config.debug,
-        # auth_provider=AdminPanelAuthProvider(),
+        auth_provider=AdminPanelAuthProvider(),
         middlewares=[
             Middleware(
                 SessionMiddleware,
@@ -66,7 +70,7 @@ def create_app():
     logging.basicConfig(level=logging.DEBUG if config.debug else logging.INFO)
     bot = Bot(token=config.telegram_bot.token)
     container = create_container(
-        providers=[AdminPanelProvider()],
+        providers=[AdminPanelProvider(), AuthProvider(), FastapiProvider()],
         context={Config: config, Bot: bot},
     )
     app = FastAPI(debug=config.debug, lifespan=lifespan)

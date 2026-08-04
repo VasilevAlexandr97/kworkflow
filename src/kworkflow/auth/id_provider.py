@@ -2,9 +2,15 @@ import logging
 
 from uuid import UUID
 
+from fastapi import Request
+
 from kworkflow.auth.exceptions import AuthenticationError
+from kworkflow.auth.interfaces import (
+    IdProvider,
+    SessionManager,
+)
+from kworkflow.auth.session import AuthSession
 from kworkflow.common.dto import CurrentUser
-from kworkflow.common.interfaces.id_provider import IdProvider
 from kworkflow.subscriptions.interfaces import SubscriptionChecker
 from kworkflow.users.interfaces import UserGateway, UserRoleGateway
 from kworkflow.users.models import Role
@@ -29,7 +35,7 @@ class TelegramIdProvider(IdProvider):
         self.cached_user_id: UUID | None = None
         self.cached_role: Role | None = None
 
-    async def get_current_user_telegram_id(self):
+    async def get_current_user_telegram_id(self) -> int | None:
         return self.telegram_id
 
     async def _get_user_id(self) -> UUID:
@@ -76,21 +82,72 @@ class TelegramIdProvider(IdProvider):
         )
 
 
-class WorkerIdProvider(IdProvider):
-    async def get_current_user_telegram_id(self) -> int:
-        return 0
+class SessionIdProvider(IdProvider):
+    def __init__(
+        self,
+        request: Request,
+        user_gateway: UserGateway,
+        user_role_gateway: UserRoleGateway,
+        sub_checker: SubscriptionChecker,
+        session_manager: SessionManager,
+    ):
+        self.request = request
+        self.user_gateway = user_gateway
+        self.user_role_gateway = user_role_gateway
+        self.sub_checker = sub_checker
+        self.session_manager = session_manager
+
+        self._cached_session: AuthSession | None = None
+        self._cached_role: Role | None = None
+
+    async def _get_session(self) -> AuthSession:
+        if self._cached_session is not None:
+            logger.debug(f"CACHED SESSION: {self._cached_session}")
+            return self._cached_session
+        session = await self.session_manager.get_session()
+        if session is None:
+            raise AuthenticationError("Auth session not found")
+        self._cached_session = session
+        return session
+
+    async def _get_role(self, user_id: UUID) -> Role:
+        if self._cached_role is not None:
+            logger.debug(f"CACHED USER ROLE: {self._cached_role}")
+            return self._cached_role
+        role = await self.user_role_gateway.get_role_by_user_id(user_id)
+        logger.debug(f"USER ROLE: {role}")
+        self._cached_role = role
+        return role
+
+    async def get_current_user_telegram_id(self) -> int | None:
+        session = await self._get_session()
+        return await self.user_gateway.get_telegram_id_by_user_id(
+            session.user_id,
+        )
 
     async def get_current_user_id(self) -> UUID:
-        return UUID("00000000-0000-0000-0000-000000000000")
+        session = await self._get_session()
+        exists = await self.user_gateway.exists(session.user_id)
+        if not exists:
+            raise AuthenticationError("User not found")
+        return session.user_id
 
     async def get_role(self) -> Role:
-        return Role.USER
+        session = await self._get_session()
+        return await self._get_role(session.user_id)
 
     async def get_current_user(self) -> CurrentUser:
-        raise NotImplementedError
+        session = await self._get_session()
+        is_pro = await self.sub_checker.is_pro_subscription(session.user_id)
+        role = await self._get_role(session.user_id)
+        return CurrentUser(
+            id=session.user_id,
+            is_pro=is_pro,
+            is_admin=role == Role.ADMIN,
+        )
 
 
-class AdminPanelIdProvider(IdProvider):
+class WorkerIdProvider(IdProvider):
     async def get_current_user_telegram_id(self) -> int:
         return 0
 

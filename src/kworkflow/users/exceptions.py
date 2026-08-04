@@ -10,6 +10,10 @@ class UserNotFoundError(Exception):
     pass
 
 
+class UserNotFoundByUsernameError(Exception):
+    pass
+
+
 class UserRoleCreationError(Exception):
     pass
 

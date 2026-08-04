@@ -2,7 +2,7 @@ import logging
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,9 +46,18 @@ class SAUserGateway(UserGateway):
         stmt = select(User.id).where(User.telegram_id == telegram_id)
         return await self.session.scalar(stmt)
 
+    async def get_telegram_id_by_user_id(self, user_id: UUID) -> int | None:
+        stmt = select(User.telegram_id).where(User.id == user_id)
+        return await self.session.scalar(stmt)
+
     async def get_by_username(self, username: str) -> User | None:
         stmt = select(User).where(User.username == username)
         return await self.session.scalar(stmt)
+
+    async def exists(self, user_id: UUID) -> bool:
+        stmt = select(exists().where(User.id == user_id))
+        result = await self.session.scalar(stmt)
+        return bool(result)
 
 
 class SAUserRoleGateway(UserRoleGateway):

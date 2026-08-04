@@ -26,7 +26,15 @@ class UserGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_telegram_id_by_user_id(self, user_id: UUID) -> int | None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def get_by_username(self, username: str) -> User | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def exists(self, user_id: UUID) -> bool:
         raise NotImplementedError
 
 

@@ -10,6 +10,7 @@ from dishka import (
     make_async_container,
     provide,
 )
+from fastapi import Request
 from fastapi.templating import Jinja2Templates
 from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
@@ -19,19 +20,29 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from kworkflow.auth.telegram_auth import TelegramAuth
-from kworkflow.common.dto import CurrentUser
-from kworkflow.common.interfaces.id_provider import IdProvider
-from kworkflow.common.interfaces.llm_client import LLMClient
-from kworkflow.common.interfaces.password_hasher import PasswordHasher
-from kworkflow.common.interfaces.transaction_manager import TransactionManager
-from kworkflow.infra.auth.id_provider import (
-    AdminPanelIdProvider,
+from kworkflow.auth.id_provider import (
+    SessionIdProvider,
     TelegramIdProvider,
     WebIdProvider,
     WorkerIdProvider,
 )
-from kworkflow.infra.common.password_hasher_bcrypt import PasswordHasherBcrypt
+from kworkflow.auth.interfaces import (
+    IdProvider,
+    SessionManager,
+    SessionStorage,
+    SessionTransport,
+)
+from kworkflow.auth.log_in import LogIn
+from kworkflow.auth.log_out import LogOut
+from kworkflow.auth.session_manager import SessionManagerImpl
+from kworkflow.auth.session_storage import RedisSessionStorage
+from kworkflow.auth.session_transport import FastAPISessionTransport
+from kworkflow.auth.telegram_auth import TelegramAuth
+from kworkflow.common.dto import CurrentUser
+from kworkflow.common.interfaces.llm_client import LLMClient
+from kworkflow.common.interfaces.password_hasher import PasswordHasher
+from kworkflow.common.interfaces.transaction_manager import TransactionManager
+from kworkflow.common.password_hasher_bcrypt import PasswordHasherBcrypt
 from kworkflow.infra.database.transaction_manager import SATransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.infra.polza.client import PolzaClient
@@ -243,6 +254,8 @@ class InfraProvider(Provider):
         yield client
         await client.close()
 
+
+class AuthProvider(Provider):
     @provide(scope=Scope.APP, provides=PasswordHasher)
     async def get_password_hasher(self) -> PasswordHasherBcrypt:
         return PasswordHasherBcrypt()
@@ -501,8 +514,48 @@ class WorkerProvider(Provider):
 
 class AdminPanelProvider(Provider):
     @provide(scope=Scope.REQUEST, provides=IdProvider)
-    def get_id_provider(self) -> AdminPanelIdProvider:
-        return AdminPanelIdProvider()
+    def get_id_provider(
+        self,
+        request: Request,
+        user_gateway: UserGateway,
+        user_role_gateway: UserRoleGateway,
+        sub_checker: SubscriptionChecker,
+        session_manager: SessionManager,
+    ) -> SessionIdProvider:
+        return SessionIdProvider(
+            request=request,
+            user_gateway=user_gateway,
+            user_role_gateway=user_role_gateway,
+            sub_checker=sub_checker,
+            session_manager=session_manager,
+        )
+
+    @provide(scope=Scope.REQUEST, provides=SessionStorage)
+    def get_session_storage(self, redis_client: Redis) -> RedisSessionStorage:
+        return RedisSessionStorage(redis_client)
+
+    @provide(scope=Scope.REQUEST, provides=SessionTransport)
+    def get_session_transport(
+        self,
+        request: Request,
+    ) -> FastAPISessionTransport:
+        return FastAPISessionTransport(request, session_key="__adm_s_id")
+
+    @provide(scope=Scope.REQUEST, provides=SessionManager)
+    def get_session_manager(
+        self,
+        session_storage: SessionStorage,
+        session_transport: SessionTransport,
+        config: Config,
+    ) -> SessionManager:
+        return SessionManagerImpl(
+            session_storage=session_storage,
+            session_transport=session_transport,
+            ttl_seconds=config.admin_panel.session_ttl,
+        )
+
+    log_in = provide(LogIn, scope=Scope.REQUEST)
+    log_out = provide(LogOut, scope=Scope.REQUEST)
 
 
 class WebProvider(Provider):
@@ -520,6 +573,7 @@ def create_container(
     context: dict[Any, Any] | None = None,
 ) -> AsyncContainer:
     return make_async_container(
+        AuthProvider(),
         InfraProvider(),
         UserProvider(),
         ProjectProvider(),

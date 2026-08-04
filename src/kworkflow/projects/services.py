@@ -6,7 +6,7 @@ import traceback
 from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
-from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.auth.interfaces import IdProvider
 from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.notifications.interfaces import (

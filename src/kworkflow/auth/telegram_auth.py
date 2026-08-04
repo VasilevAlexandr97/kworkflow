@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
 from kworkflow.auth.exceptions import AuthenticationError
-from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.auth.interfaces import IdProvider
 from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.users.exceptions import CreateUserError, UserAlreadyExistsError
 from kworkflow.users.interfaces import UserGateway, UserRoleGateway

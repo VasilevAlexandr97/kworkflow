@@ -5,8 +5,8 @@ import pytest
 from fakes.infra import FakeTransactionManager
 from fakes.users import FakeUserGateway, FakeUserRoleGateway
 
-from kworkflow.infra.common.password_hasher_bcrypt import PasswordHasherBcrypt
-from kworkflow.users.exceptions import UserAlreadyExistsError, CreateUserError
+from kworkflow.common.password_hasher_bcrypt import PasswordHasherBcrypt
+from kworkflow.users.exceptions import CreateUserError, UserAlreadyExistsError
 from kworkflow.users.models import Role, User
 from kworkflow.users.service import CreateAdminUserService
 

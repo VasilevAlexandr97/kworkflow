@@ -3,7 +3,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-from kworkflow.common.interfaces.id_provider import IdProvider
+from kworkflow.auth.interfaces import IdProvider
 from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.preferences.consts import (
     MAX_FREE_CATEGORIES,
