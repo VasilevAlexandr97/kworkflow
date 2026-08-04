@@ -1,6 +1,7 @@
 from kworkflow.projects.models import ProjectCategory
 
 
+# TODO: подумать добавить или нет интерфейс для основного сервиса
 class FakeFollowService:
     def __init__(self, categories: list[ProjectCategory] | None = None):
         self.categories = categories or []

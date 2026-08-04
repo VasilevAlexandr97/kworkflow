@@ -16,3 +16,19 @@ class UserRoleCreationError(Exception):
 
 class UserRoleNotFoundError(Exception):
     pass
+
+
+class InvalidUsernameError(Exception):
+    pass
+
+
+class InvalidPasswordError(Exception):
+    pass
+
+
+class UsernameLengthError(Exception):
+    pass
+
+
+class PasswordLengthError(Exception):
+    pass

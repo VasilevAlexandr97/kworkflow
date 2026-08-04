@@ -46,6 +46,10 @@ class SAUserGateway(UserGateway):
         stmt = select(User.id).where(User.telegram_id == telegram_id)
         return await self.session.scalar(stmt)
 
+    async def get_by_username(self, username: str) -> User | None:
+        stmt = select(User).where(User.username == username)
+        return await self.session.scalar(stmt)
+
 
 class SAUserRoleGateway(UserRoleGateway):
     def __init__(self, session: AsyncSession):

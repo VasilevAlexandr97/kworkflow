@@ -12,7 +12,7 @@ from dishka import (
     provide,
 )
 from dishka.integrations.aiogram import setup_dishka
-from fakes.services import FakeFollowService
+from fakes.preferences import FakeFollowService
 from fakes.telegram_auth import FakeTelegramAuth
 from fakes.telegram_bot import BotClient, FakeBot
 

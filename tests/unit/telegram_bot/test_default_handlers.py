@@ -6,7 +6,7 @@ from aiogram.enums import ChatType
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.methods import SendMessage
-from fakes.services import FakeFollowService
+from fakes.preferences import FakeFollowService
 from fakes.telegram_auth import FakeTelegramAuth
 from fakes.telegram_bot import BotClient
 

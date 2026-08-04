@@ -23,6 +23,7 @@ from kworkflow.auth.telegram_auth import TelegramAuth
 from kworkflow.common.dto import CurrentUser
 from kworkflow.common.interfaces.id_provider import IdProvider
 from kworkflow.common.interfaces.llm_client import LLMClient
+from kworkflow.common.interfaces.password_hasher import PasswordHasher
 from kworkflow.common.interfaces.transaction_manager import TransactionManager
 from kworkflow.infra.auth.id_provider import (
     AdminPanelIdProvider,
@@ -30,6 +31,7 @@ from kworkflow.infra.auth.id_provider import (
     WebIdProvider,
     WorkerIdProvider,
 )
+from kworkflow.infra.common.password_hasher_bcrypt import PasswordHasherBcrypt
 from kworkflow.infra.database.transaction_manager import SATransactionManager
 from kworkflow.infra.kwork.client import KworkClient
 from kworkflow.infra.polza.client import PolzaClient
@@ -123,6 +125,7 @@ from kworkflow.users.gateways import (
     SAUserRoleGateway,
 )
 from kworkflow.users.interfaces import UserGateway, UserRoleGateway
+from kworkflow.users.service import CreateAdminUserService
 
 
 class InfraProvider(Provider):
@@ -240,6 +243,10 @@ class InfraProvider(Provider):
         yield client
         await client.close()
 
+    @provide(scope=Scope.APP, provides=PasswordHasher)
+    async def get_password_hasher(self) -> PasswordHasherBcrypt:
+        return PasswordHasherBcrypt()
+
 
 class UserProvider(Provider):
     user_gateway = provide(
@@ -256,6 +263,11 @@ class UserProvider(Provider):
     @provide(scope=Scope.REQUEST)
     async def get_current_user(self, id_provider: IdProvider) -> CurrentUser:
         return await id_provider.get_current_user()
+
+    create_admin_user_service = provide(
+        CreateAdminUserService,
+        scope=Scope.REQUEST,
+    )
 
 
 class ProjectProvider(Provider):

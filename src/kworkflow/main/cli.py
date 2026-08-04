@@ -1,42 +1,48 @@
+import argparse
 import asyncio
-import sys
+import logging
 
 from aiogram import Bot
-from dishka import make_async_container
 
 from kworkflow.main.config import Config, get_config
 from kworkflow.main.di import (
-    InfraProvider,
-    NotificationProvider,
-    PreferenceProvider,
-    ProjectProvider,
     WorkerProvider,
+    create_container,
 )
-from kworkflow.notifications.services import ProjectNotificationService
 from kworkflow.projects.services import ProjectCategoryService
+from kworkflow.users.service import CreateAdminUserService
+
+logger = logging.getLogger(__name__)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="kworkflow")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("import-categories")
+    admin = sub.add_parser("create-admin")
+    admin.add_argument("--username", required=True)
+    admin.add_argument("--password", required=True)
+    return parser
 
 
 async def main():
+    logging.basicConfig(level=logging.INFO)
     config = get_config()
     bot = Bot(token=config.telegram_bot.token)
-    container = make_async_container(
-        InfraProvider(),
-        ProjectProvider(),
-        PreferenceProvider(),
-        NotificationProvider(),
-        WorkerProvider(),
+    container = create_container(
+        providers=[WorkerProvider()],
         context={Config: config, Bot: bot},
     )
 
-    command = sys.argv[1]
-
+    args = build_parser().parse_args()
     async with container() as c_req:
-        if command == "import-categories":
+        if args.command == "import-categories":
             service = await c_req.get(ProjectCategoryService)
             await service.import_categories()
-        else:
-            service = await c_req.get(ProjectNotificationService)
-            await service.notify_new_projects()
+        elif args.command == "create-admin":
+            service = await c_req.get(CreateAdminUserService)
+            await service.create(args.username, args.password)
+            logger.info("Admin user created")
     await container.close()
 
 

@@ -7,10 +7,12 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     ForeignKey,
+    String,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kworkflow.infra.database.base import Base
+from kworkflow.users.consts import USERNAME_MAX_LENGTH
 
 
 class Role(StrEnum):
@@ -22,10 +24,19 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[UUID] = mapped_column(SA_UUID(as_uuid=True), primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(
+    telegram_id: Mapped[int | None] = mapped_column(
         BigInteger,
         unique=True,
-        nullable=False,
+        nullable=True,
+    )
+    username: Mapped[str | None] = mapped_column(
+        String(USERNAME_MAX_LENGTH),
+        unique=True,
+        nullable=True,
+    )
+    password_hash: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -46,6 +57,7 @@ class User(Base):
             "UserModel("
             f"id={self.id}, "
             f"telegram_id={self.telegram_id}, "
+            f"username={self.username}, "
             f"created_at={self.created_at}, "
             f"updated_at={self.updated_at}"
             ")"

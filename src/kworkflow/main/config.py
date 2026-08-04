@@ -77,6 +77,12 @@ class WebConfig:
 
 
 @dataclass(frozen=True)
+class AdminPanelConfig:
+    session_secret_key: str
+    session_ttl: int = 86400
+
+
+@dataclass(frozen=True)
 class Config:
     postgres: PostgresConfig
     redis: RedisConfig
@@ -84,8 +90,8 @@ class Config:
     kwork: KworkConfig
     polza: PolzaConfig
     yookassa: YookassaConfig
+    admin_panel: AdminPanelConfig
     web: WebConfig
-    # project_dir: Path = PROJECT_DIR
     telegram_channel_id: int | None = None
     debug: bool = field(default=False)
 
@@ -144,6 +150,12 @@ def get_config() -> Config:
         yookassa=YookassaConfig(
             shop_id=get_required_env("YOOKASSA_SHOP_ID"),
             secret_key=get_required_env("YOOKASSA_SECRET_KEY"),
+        ),
+        admin_panel=AdminPanelConfig(
+            session_secret_key=get_required_env(
+                "ADMIN_PANEL_SESSION_SECRET_KEY",
+            ),
+            session_ttl=int(get_required_env("ADMIN_PANEL_SESSION_TTL")),
         ),
         web=WebConfig(),
         telegram_channel_id=telegram_channel_id,

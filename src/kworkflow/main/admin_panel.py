@@ -7,8 +7,11 @@ from dishka import AsyncContainer
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.middleware import Middleware
+from starlette.middleware.sessions import SessionMiddleware
 from starlette_admin.contrib.sqla import Admin
 
+# from kworkflow.admin_panel.auth import AdminPanelAuthProvider
 from kworkflow.admin_panel.views.projects import (
     ProjectProposalView,
     ProjectView,
@@ -28,8 +31,20 @@ def setup_views(admin: Admin):
     admin.add_view(ProjectProposalView(ProjectProposal))
 
 
-def setup_admin(engine: AsyncEngine, app: FastAPI):
-    admin = Admin(engine=engine)
+def setup_admin(engine: AsyncEngine, app: FastAPI, config: Config):
+    admin = Admin(
+        engine=engine,
+        debug=config.debug,
+        # auth_provider=AdminPanelAuthProvider(),
+        middlewares=[
+            Middleware(
+                SessionMiddleware,
+                session_cookie="__adm_s",
+                max_age=config.admin_panel.session_ttl,
+                secret_key=config.admin_panel.session_secret_key,
+            ),
+        ],
+    )
     setup_views(admin)
     admin.mount_to(app)
 
@@ -38,7 +53,8 @@ def setup_admin(engine: AsyncEngine, app: FastAPI):
 async def lifespan(app: FastAPI):
     container: AsyncContainer = app.state.dishka_container
     engine = await container.get(AsyncEngine)
-    setup_admin(engine, app)
+    config = await container.get(Config)
+    setup_admin(engine=engine, app=app, config=config)
     logger.info("Admin panel started")
     yield
     logger.info("Stopping admin panel")
