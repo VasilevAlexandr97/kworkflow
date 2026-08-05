@@ -46,6 +46,7 @@ def setup_admin(engine: AsyncEngine, app: FastAPI, config: Config):
                 session_cookie="__adm_s",
                 max_age=config.admin_panel.session_ttl,
                 secret_key=config.admin_panel.session_secret_key,
+                same_site="strict",
             ),
         ],
     )
