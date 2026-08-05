@@ -6,8 +6,8 @@ router = APIRouter()
 ROBOTS_TXT = """User-agent: *
 Allow: /
 
-Host: https://kworkflow.ru/
-Sitemap: https://kworkflow.ru/sitemap.xml
+Host: https://lansly.ru/
+Sitemap: https://lansly.ru/sitemap.xml
 """
 
 

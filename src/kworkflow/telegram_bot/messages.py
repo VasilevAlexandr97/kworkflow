@@ -34,7 +34,7 @@ def project_message(project: Project, ref_id: int | None = None) -> str:
 
 def start_message() -> str:
     return (
-        "👋 Добро пожаловать в <b>KworkFlow</b>\n\n"
+        "👋 Добро пожаловать в <b>Lansly</b>\n\n"
         "Мониторю проекты на бирже Kwork и присылаю новые мгновенно.\n\n"
         "⚡ Что я делаю:\n"
         "• Мониторинг новых проектов\n"
@@ -51,8 +51,8 @@ def menu_message(follow_categories: list[ProjectCategory]) -> str:
     if not follow_categories:
         follow_categories_str = "• Нет отслеживаемых категорий"
     return (
-        "🏠 <b>Главное меню KworkFlow</b>\n\n"
-        "⚡ <b>KworkFlow</b> отслеживает новые проекты на бирже <b>Kwork</b> "
+        "🏠 <b>Главное меню Lansly</b>\n\n"
+        "⚡ <b>Lansly</b> отслеживает новые проекты на бирже <b>Kwork</b> "
         "и присылает подходящие задания автоматически.\n\n"
         "<b>📂 Отслеживаемые категории:</b>\n"
         f"{follow_categories_str}\n\n"
@@ -362,11 +362,11 @@ def try_again_later_message() -> str:
 def about_project_message() -> str:
     # TODO: хардкод ссылок
     return (
-        "ℹ️ <b>KworkFlow</b>\n\n"
+        "ℹ️ <b>Lansly</b>\n\n"
         "📊 Отслеживаю новые проекты на Kwork и "
         "помогаю генерировать отклики через нейросеть.\n\n"
         "🔗 <b>Полезные ссылки:</b>\n\n"
-        "🌐 Сайт — <a href='https://kworkflow.ru'>kworkflow.ru</a>\n\n"
+        "🌐 Сайт — <a href='https://lansly.ru'>lansly.ru</a>\n\n"
         "🆘 Поддержка — @askanonagent\n\n"
         "📢 Канал с проектами — https://t.me/freelance_pr_feed\n\n"
         "💬 Остались вопросы? Пиши в саппорт!"

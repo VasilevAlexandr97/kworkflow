@@ -309,7 +309,7 @@ def build_channel_project_kbd(project: Project, ref_id: int | None = None):
     builder.row(
         InlineKeyboardButton(
             text="🚀 Больше проектов",
-            url="https://t.me/kworkflowbot",
+            url="https://t.me/lansly_bot",
         ),
     )
     return builder.as_markup()
@@ -459,7 +459,7 @@ def build_about_project_kbd():
         ),
         InlineKeyboardButton(
             text="🌐 Сайт",
-            url="https://kworkflow.ru",
+            url="https://lansly.ru",
         ),
     )
     builder.row(

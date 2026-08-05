@@ -2,14 +2,14 @@ x-app-build: &app-build
   build:
     context: .
     dockerfile: Dockerfile
-  image: kworkflow-app:latest # одно имя — образ собирается один раз и переиспользуется
+  image: lansly-app:latest # одно имя — образ собирается один раз и переиспользуется
   env_file:
     - .env
 
 services:
   postgres:
     image: postgres:18-trixie
-    container_name: kworkflow_postgres
+    container_name: lansly_postgres
     env_file:
       - .env
     environment:
@@ -28,7 +28,7 @@ services:
 
   redis:
     image: redis:8.6.3-trixie
-    container_name: kworkflow_redis
+    container_name: lansly_redis
     env_file:
       - .env
     ports:
@@ -44,7 +44,7 @@ services:
 
   migrations:
     <<: *app-build
-    container_name: kworkflow_migrations
+    container_name: lansly_migrations
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,7 +54,7 @@ services:
 
   admin_panel:
     <<: *app-build
-    container_name: kworkflow_admin_panel
+    container_name: lansly_admin_panel
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,7 +70,7 @@ services:
 
   web:
     <<: *app-build
-    container_name: kworkflow_web
+    container_name: lansly_web
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,7 +86,7 @@ services:
 
   telegram_bot:
     <<: *app-build
-    container_name: kworkflow_telegram_bot
+    container_name: lansly_telegram_bot
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,7 +99,7 @@ services:
     command: uv run telegram-bot
   worker:
     <<: *app-build
-    container_name: kworkflow_worker
+    container_name: lansly_worker
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,7 +113,7 @@ services:
 
   scheduler:
     <<: *app-build
-    container_name: kworkflow_scheduler
+    container_name: lansly_scheduler
     depends_on:
       postgres:
         condition: service_healthy

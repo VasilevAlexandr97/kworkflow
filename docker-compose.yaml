@@ -2,7 +2,7 @@ x-app-build: &app-build
   build:
     context: .
     dockerfile: Dockerfile
-  image: kworkflow-app:latest   # одно имя — образ собирается один раз и переиспользуется
+  image: lansly-app:latest   # одно имя — образ собирается один раз и переиспользуется
   env_file:
     - .env
 

@@ -185,7 +185,7 @@ class SubscriptionPaymentService:
                     # TODO: урл захардкожен, возможно стоит вынести в конфиг
                     confirmation=ConfirmationRedirectData(
                         type=ConfirmationType.REDIRECT,
-                        return_url="https://t.me/kworkflowbot",
+                        return_url="https://t.me/lansly_bot",
                     ),
                     metadata={
                         "plan_id": str(plan.id),

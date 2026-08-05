@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lansly{% endblock %}</title>
+    <meta name="description" content="{% block description %}Lansly - сервис поиска новых проектов для фрилансеров.{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
+    <meta property="og:type" content="website">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='favicon/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='favicon/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', path='favicon/site.webmanifest') }}">
+    {% block head %}{% endblock %}
+    <!-- Google Tag Manager -->
+    <script nonce="{{ request.state.nonce }}">(function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-W3BKM89M');</script>
+    <!-- End Google Tag Manager -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+</head>
+
+<body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W3BKM89M"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <header>
+        <div class="wrap nav">
+            <a href="/" class="logo">
+                Lansly
+            </a>
+            <nav class="nav-links">
+                {% block nav_links %}
+                <a href="#features">Возможности</a>
+                <a href="#how">Как это работает</a>
+                <a href="#pricing">Тарифы</a>
+                <a href="#faq">ЧаВо</a>
+                {% endblock %}
+            </nav>
+            <div class="nav-right">
+                <a href="https://t.me/lansly_bot" class="btn btn-primary btn-sm">Открыть в Telegram</a>
+                <button class="nav-toggle" id="navToggle" aria-label="Меню" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+        <div class="mobile-menu" id="mobileMenu">
+            {% block nav_links_mobile %}
+            <a href="#features">Возможности</a>
+            <a href="#how">Как это работает</a>
+            <a href="#pricing">Тарифы</a>
+            <a href="#faq">ЧаВо</a>
+            {% endblock %}
+        </div>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="wrap footer-row">
+            <span>© 2026 Lansly. Сервис поиска новых проектов для фрилансеров.</span>
+            <a href="https://t.me/lansly_bot">t.me/lansly_bot</a>
+        </div>
+    </footer>
+
+    <script nonce="{{ request.state.nonce }}">
+        (function () {
+            var toggle = document.getElementById('navToggle');
+            var menu = document.getElementById('mobileMenu');
+            if (!toggle || !menu) return;
+            function close() {
+                menu.classList.remove('open');
+                toggle.classList.remove('open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+            toggle.addEventListener('click', function () {
+                var open = menu.classList.toggle('open');
+                toggle.classList.toggle('open', open);
+                toggle.setAttribute('aria-expanded', String(open));
+            });
+            menu.addEventListener('click', function (e) {
+                if (e.target.tagName === 'A') close();
+            });
+        })();
+    </script>
+
+</body>
+
+</html>
