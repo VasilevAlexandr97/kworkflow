@@ -10,13 +10,13 @@ from fakes.preferences import FakeFollowService
 from fakes.telegram_auth import FakeTelegramAuth
 from fakes.telegram_bot import BotClient
 
-from kworkflow.auth.telegram_auth import TelegramAuthResultDTO
-from kworkflow.projects.models import ProjectCategory
-from kworkflow.telegram_bot.keyboards import (
+from lansly.auth.telegram_auth import TelegramAuthResultDTO
+from lansly.projects.models import ProjectCategory
+from lansly.telegram_bot.keyboards import (
     build_main_menu_kbd,
     build_start_kbd,
 )
-from kworkflow.telegram_bot.messages import menu_message, start_message
+from lansly.telegram_bot.messages import menu_message, start_message
 
 # Start handler tests
 

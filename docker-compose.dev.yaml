@@ -66,7 +66,7 @@ services:
       - 8000:8000
     volumes:
       - ./src:/app/src
-    command: uv run uvicorn --factory kworkflow.main.admin_panel:create_app --host 0.0.0.0 --port 8000 --reload --reload-dir src/
+    command: uv run uvicorn --factory lansly.main.admin_panel:create_app --host 0.0.0.0 --port 8000 --reload --reload-dir src/
 
   web:
     <<: *app-build
@@ -82,7 +82,7 @@ services:
       - 8001:8001
     volumes:
       - ./src:/app/src
-    command: uv run uvicorn --factory kworkflow.main.web:create_app --host 0.0.0.0 --port 8001 --no-server-header --proxy-headers --forwarded-allow-ips='*' --reload --reload-dir src/
+    command: uv run uvicorn --factory lansly.main.web:create_app --host 0.0.0.0 --port 8001 --no-server-header --proxy-headers --forwarded-allow-ips='*' --reload --reload-dir src/
 
   telegram_bot:
     <<: *app-build
@@ -109,7 +109,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./src:/app/src
-    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1 --log-level DEBUG
+    command: uv run taskiq worker lansly.main.worker:broker lansly.background_tasks.tasks --workers 1 --log-level DEBUG
 
   scheduler:
     <<: *app-build
@@ -123,7 +123,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./src:/app/src
-    command: uv run taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
+    command: uv run taskiq scheduler lansly.main.worker:scheduler lansly.background_tasks.tasks
 
 volumes:
   pgdata:

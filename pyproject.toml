@@ -1,5 +1,5 @@
 [project]
-name = "kworkflow"
+name = "lansly"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -38,7 +38,7 @@ dev = [
 
 
 [project.scripts]
-telegram-bot="kworkflow.main.telegram_bot:run_polling"
+telegram-bot="lansly.main.telegram_bot:run_polling"
 
 [tool.uv]
 package=true

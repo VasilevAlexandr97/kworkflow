@@ -21,7 +21,7 @@ services:
       ports:
         - 15333:15333
       restart: unless-stopped
-      command: uv run uvicorn --factory kworkflow.main.admin_panel:create_app --host 0.0.0.0 --port 15333 --no-server-header --proxy-headers --forwarded-allow-ips='*'
+      command: uv run uvicorn --factory lansly.main.admin_panel:create_app --host 0.0.0.0 --port 15333 --no-server-header --proxy-headers --forwarded-allow-ips='*'
 
   web:
     <<: *app-build
@@ -32,7 +32,7 @@ services:
     ports:
       - 8000:8000
     restart: unless-stopped
-    command: uv run uvicorn --factory kworkflow.main.web:create_app --host 0.0.0.0 --port 8000 --no-server-header --proxy-headers --forwarded-allow-ips='*'
+    command: uv run uvicorn --factory lansly.main.web:create_app --host 0.0.0.0 --port 8000 --no-server-header --proxy-headers --forwarded-allow-ips='*'
   
   telegram_bot:
     # TODO: add stop grace period
@@ -50,7 +50,7 @@ services:
       migrations:
         condition: service_completed_successfully
     restart: unless-stopped
-    command: uv run taskiq worker kworkflow.main.worker:broker kworkflow.background_tasks.tasks --workers 1
+    command: uv run taskiq worker lansly.main.worker:broker lansly.background_tasks.tasks --workers 1
 
   scheduler:
     <<: *app-build
@@ -59,4 +59,4 @@ services:
       migrations:
         condition: service_completed_successfully
     restart: unless-stopped
-    command: uv run taskiq scheduler kworkflow.main.worker:scheduler kworkflow.background_tasks.tasks
+    command: uv run taskiq scheduler lansly.main.worker:scheduler lansly.background_tasks.tasks

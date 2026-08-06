@@ -1,6 +1,6 @@
 import pytest
 
-from kworkflow.main.cli import build_parser
+from lansly.main.cli import build_parser
 
 
 def test_create_admin_parses_flags():

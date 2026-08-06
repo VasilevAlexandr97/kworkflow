@@ -692,7 +692,7 @@ wheels = [
 ]
 
 [[package]]
-name = "kworkflow"
+name = "lansly"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

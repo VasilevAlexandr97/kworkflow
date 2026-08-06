@@ -1,4 +1,4 @@
-from kworkflow.projects.models import ProjectCategory
+from lansly.projects.models import ProjectCategory
 
 
 # TODO: подумать добавить или нет интерфейс для основного сервиса

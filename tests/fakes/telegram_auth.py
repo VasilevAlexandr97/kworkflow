@@ -1,6 +1,6 @@
 from uuid import uuid7
 
-from kworkflow.auth.telegram_auth import TelegramAuthResultDTO
+from lansly.auth.telegram_auth import TelegramAuthResultDTO
 
 
 class FakeTelegramAuth:

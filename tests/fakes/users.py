@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from kworkflow.users.exceptions import CreateUserError, UserAlreadyExistsError
-from kworkflow.users.models import Role, User, UserRole
+from lansly.users.exceptions import CreateUserError, UserAlreadyExistsError
+from lansly.users.models import Role, User, UserRole
 
 
 class FakeUserGateway:
