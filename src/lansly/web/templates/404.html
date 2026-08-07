@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Страница не найдена - Lansly{% endblock %}
+
+{% block description %}Страница не найдена. Вернитесь на главную Lansly.{% endblock %}
+
+{% block content %}
+    <section class="error-page">
+        <div class="wrap error-wrap">
+            <span class="error-code grad-text">404</span>
+            <h1>Страница не найдена</h1>
+            <p>Такой страницы не существует или она была перемещена.</p>
+            <div class="error-actions">
+                <a href="/" class="btn btn-primary">На главную</a>
+                <a href="https://t.me/lansly_bot" class="btn btn-ghost">Написать в Telegram</a>
+            </div>
+        </div>
+    </section>
+{% endblock %}

@@ -10,6 +10,7 @@ from lansly.users.models import *
 from lansly.preferences.models import *
 from lansly.notifications.models import *
 from lansly.subscriptions.models import *
+from lansly.articles.models import *
 
 project_config = get_config()
 # this is the Alembic Config object, which provides

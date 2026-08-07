@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.meta_title or (article.title ~ " - Lansly") }}{% endblock %}
+
+{% block description %}{{ article.meta_description or article.description or article.title }}{% endblock %}
+
+{% block content %}
+    <section class="article-page">
+        <div class="wrap">
+            <div class="article-header">
+                <a href="/articles/" class="article-back">← Все статьи</a>
+                <h1>{{ article.title }}</h1>
+                {% set minutes = (((article.content | striptags | wordcount) / 150) | round(0, 'ceil') | int) %}
+                <div class="article-meta">
+                    <time datetime="{{ article.published_at.isoformat() }}">{{ article.published_at.strftime('%d.%m.%Y') }}</time>
+                    <span class="article-meta-dot">·</span>
+                    <span>{{ minutes }} мин чтения</span>
+                </div>
+                {% if article.description %}
+                <p class="article-lead">{{ article.description }}</p>
+                {% endif %}
+            </div>
+
+            <div class="article-body">
+                {{ article.content | safe }}
+            </div>
+
+            <footer class="article-footer">
+                <a href="/articles/" class="btn btn-ghost btn-sm">← Все статьи</a>
+                <a href="https://t.me/lansly_bot" class="btn btn-primary btn-sm">Открыть в Telegram</a>
+            </footer>
+        </div>
+    </section>
+{% endblock %}

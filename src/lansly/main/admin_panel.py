@@ -12,11 +12,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette_admin.contrib.sqla import Admin
 
 from lansly.admin_panel.auth import AdminPanelAuthProvider
+from lansly.admin_panel.views.articles import ArticleView
 from lansly.admin_panel.views.projects import (
     ProjectProposalView,
     ProjectView,
 )
 from lansly.admin_panel.views.users import UserView
+from lansly.articles.models import Article
 from lansly.main.config import Config, get_config
 from lansly.main.di import (
     AdminPanelProvider,
@@ -33,6 +35,7 @@ def setup_views(admin: Admin):
     admin.add_view(UserView(User))
     admin.add_view(ProjectView(Project))
     admin.add_view(ProjectProposalView(ProjectProposal))
+    admin.add_view(ArticleView(Article))
 
 
 def setup_admin(engine: AsyncEngine, app: FastAPI, config: Config):
@@ -74,6 +77,15 @@ def create_app():
         providers=[AdminPanelProvider(), AuthProvider(), FastapiProvider()],
         context={Config: config, Bot: bot},
     )
-    app = FastAPI(debug=config.debug, lifespan=lifespan)
+    if config.debug:
+        app = FastAPI(debug=config.debug, lifespan=lifespan)
+    else:
+        app = FastAPI(
+            debug=config.debug,
+            lifespan=lifespan,
+            docs_url=None,
+            redoc_url=None,
+            openapi_url=None,
+        )
     setup_dishka(container, app)
     return app

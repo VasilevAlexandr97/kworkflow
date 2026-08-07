@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Статьи - Lansly{% endblock %}
+
+{% block description %}Полезные статьи и руководства для фрилансеров: как находить заказы быстрее, настраивать отклики и расти на биржах.{% endblock %}
+
+{% block content %}
+    <section class="articles">
+        <div class="wrap">
+            <div class="section-head section-center">
+                <h1>Статьи для фрилансеров</h1>
+                <p class="articles-lead">Разбираем, как находить проекты первым, писать отклики, которые читают, и не терять заказы.</p>
+            </div>
+
+            <div class="article-list">
+                {% for article in pagination.items %}
+                <article class="article-item">
+                    <a href="/articles/{{ article.slug }}/" class="article-item-title">{{ article.title }}</a>
+                    {% if article.description %}
+                    <p class="article-item-desc">{{ article.description }}</p>
+                    {% endif %}
+                    <time class="article-item-date">{{ article.published_at.strftime('%d.%m.%Y') }}</time>
+                </article>
+                {% endfor %}
+                {% if pagination.total == 0 %}
+                <p class="article-empty">Статьи скоро появятся.</p>
+                {% endif %}
+            </div>
+
+            {% set total_pages = ((pagination.total + pagination.per_page - 1) // pagination.per_page) %}
+            {% if pagination.total > pagination.per_page %}
+            <nav class="pagination" aria-label="Пагинация">
+                {% if pagination.page > 1 %}
+                <a href="/articles/?page={{ pagination.page - 1 }}" class="page-link" aria-label="Предыдущая страница">←</a>
+                {% else %}
+                <span class="page-link page-disabled" aria-hidden="true">←</span>
+                {% endif %}
+
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == pagination.page %}
+                    <span class="page-link page-current" aria-current="page">{{ p }}</span>
+                    {% else %}
+                    <a href="/articles/?page={{ p }}" class="page-link">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.page < total_pages %}
+                <a href="/articles/?page={{ pagination.page + 1 }}" class="page-link" aria-label="Следующая страница">→</a>
+                {% else %}
+                <span class="page-link page-disabled" aria-hidden="true">→</span>
+                {% endif %}
+            </nav>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

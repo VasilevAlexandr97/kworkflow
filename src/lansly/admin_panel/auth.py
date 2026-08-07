@@ -34,6 +34,7 @@ class AdminPanelAuthProvider(AuthProvider):
         request: Request,
         response: Response,
     ) -> Response:
+        # Получение контейнера через state
         container: AsyncContainer = request.scope["state"]["dishka_container"]
         async with container() as r_c:
             log_in = await r_c.get(LogIn)

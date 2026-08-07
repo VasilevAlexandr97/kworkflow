@@ -1,3 +1,8 @@
+from lansly.web.sitemap.builder import SitemapBuilder
+from lansly.web.sitemap.sections import (
+    StaticSitemapSection,
+    ArticlesSitemapSection,
+)
 from collections.abc import AsyncIterable
 from typing import Any
 
@@ -20,6 +25,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from lansly.articles.gateways import SAArticleGateway
+from lansly.articles.interfaces import ArticleGateway
+from lansly.articles.service import ArticleService
 from lansly.auth.id_provider import (
     SessionIdProvider,
     TelegramIdProvider,
@@ -257,8 +265,17 @@ class InfraProvider(Provider):
 
 class AuthProvider(Provider):
     @provide(scope=Scope.APP, provides=PasswordHasher)
-    async def get_password_hasher(self) -> PasswordHasherBcrypt:
+    def get_password_hasher(self) -> PasswordHasherBcrypt:
         return PasswordHasherBcrypt()
+
+
+class ArticleProvider(Provider):
+    article_gateway = provide(
+        SAArticleGateway,
+        scope=Scope.REQUEST,
+        provides=ArticleGateway,
+    )
+    article_service = provide(ArticleService, scope=Scope.REQUEST)
 
 
 class UserProvider(Provider):
@@ -559,6 +576,22 @@ class AdminPanelProvider(Provider):
 
 
 class WebProvider(Provider):
+    static_sitemap_section = provide(StaticSitemapSection, scope=Scope.REQUEST)
+    articles_sitemap_section = provide(
+        ArticlesSitemapSection,
+        scope=Scope.REQUEST,
+    )
+
+    @provide(scope=Scope.REQUEST)
+    def get_sitemap_builder(
+        self,
+        static_sitemap_section: StaticSitemapSection,
+        articles_sitemap_section: ArticlesSitemapSection,
+    ) -> SitemapBuilder:
+        return SitemapBuilder(
+            sections=[static_sitemap_section, articles_sitemap_section],
+        )
+
     @provide(scope=Scope.REQUEST, provides=IdProvider)
     def get_id_provider(self) -> WebIdProvider:
         return WebIdProvider()
@@ -574,6 +607,7 @@ def create_container(
 ) -> AsyncContainer:
     return make_async_container(
         AuthProvider(),
+        ArticleProvider(),
         InfraProvider(),
         UserProvider(),
         ProjectProvider(),

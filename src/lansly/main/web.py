@@ -2,12 +2,18 @@ import logging
 
 from aiogram import Bot
 from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from lansly.main.config import Config, get_config
 from lansly.main.di import WebProvider, create_container
+from lansly.web.exception_handlers import (
+    http_exception_handler,
+    server_error_handler,
+)
+from lansly.web.middlewares.not_found import NotFoundMiddleware
 from lansly.web.middlewares.security import SecurityHeadersMiddleware
+from lansly.web.routers.articles import router as articles_router
 from lansly.web.routers.index import router as index_router
 from lansly.web.routers.robots import router as robots_router
 from lansly.web.routers.sitemap import router as sitemap_router
@@ -15,12 +21,19 @@ from lansly.web.routers.sitemap import router as sitemap_router
 
 def setup_middlewares(app: FastAPI):
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(NotFoundMiddleware)
 
 
 def setup_routers(app: FastAPI):
     app.include_router(index_router)
+    app.include_router(articles_router)
     app.include_router(robots_router)
     app.include_router(sitemap_router)
+
+
+def setup_error_handlers(app: FastAPI):
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(Exception, server_error_handler)
 
 
 def create_app():
@@ -47,5 +60,6 @@ def create_app():
     )
     setup_middlewares(app)
     setup_routers(app)
+    setup_error_handlers(app)
     setup_dishka(container, app)
     return app
